@@ -49,3 +49,29 @@ func (c *Client) GetTree() (*Node, error) {
 
 	return &rootNode, nil
 }
+
+func (c *Client) GetWorkspaceInfo(wsNum int) (*WorkspaceInfo, error) {
+	if c.verbose {
+		log.Printf("Getting info for workspace %d", wsNum)
+	}
+
+	tree, err := c.GetTree()
+	if err != nil {
+		return nil, err
+	}
+
+	workspaces := tree.FindWorkspaces()
+	ws, exists := workspaces[wsNum]
+	if !exists {
+		return nil, fmt.Errorf("workspace %d not found", wsNum)
+	}
+
+	info := &WorkspaceInfo{
+		Number:         wsNum,
+		Layout:         ws.Layout,
+		Representation: ws.Representation,
+		AppOrder:       ExtractAppOrder(ws.Representation),
+	}
+
+	return info, nil
+}

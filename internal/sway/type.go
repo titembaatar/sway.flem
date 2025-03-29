@@ -4,6 +4,7 @@ type Client struct {
 	verbose bool
 }
 
+// swaymsg -t get_tree --raw response
 type Node struct {
 	ID               int64        `json:"id"`
 	Name             string       `json:"name"`
@@ -18,6 +19,8 @@ type Node struct {
 	WindowProperties *WindowProps `json:"window_properties"`
 	Nodes            []Node       `json:"nodes"`
 	FloatingNodes    []Node       `json:"floating_nodes"`
+	Representation   string       `json:"representation,omitempty"`
+	Layout           string       `json:"layout"` // Make sure this field exists
 }
 
 type Rect struct {
@@ -32,6 +35,31 @@ type WindowProps struct {
 	Instance string `json:"instance"`
 	Title    string `json:"title"`
 }
+
+// Workspaces
+
+type WorkspaceInfo struct {
+	Number         int
+	Layout         string
+	Representation string
+	AppOrder       []string
+}
+
+type LayoutNode struct {
+	Type     string   // "V", "H", "S", "T", or app name
+	Children []string // App names in this container
+}
+
+type LayoutType string
+
+const (
+	LayoutTypeVertical   LayoutType = "splitv"
+	LayoutTypeHorizontal LayoutType = "splith"
+	LayoutTypeStacking   LayoutType = "stacking"
+	LayoutTypeTabbed     LayoutType = "tabbed"
+)
+
+// Apps
 
 type AppNode struct {
 	Name     string
