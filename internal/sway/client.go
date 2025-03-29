@@ -12,10 +12,6 @@ var (
 	ErrCommandFailed = errors.New("sway command failed")
 )
 
-type Client struct {
-	verbose bool
-}
-
 func NewClient(verbose bool) *Client {
 	return &Client{
 		verbose: verbose,

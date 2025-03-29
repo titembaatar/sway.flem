@@ -9,15 +9,6 @@ import (
 	"github.com/titembaatar/sway.flem/internal/sway"
 )
 
-type AppUpdate struct {
-	NodeID int64
-	Config config.App
-}
-
-type WorkspaceManager struct {
-	client *sway.Client
-}
-
 func NewWorkspaceManager(client *sway.Client) *WorkspaceManager {
 	return &WorkspaceManager{
 		client: client,
@@ -110,4 +101,3 @@ func (wm *WorkspaceManager) SetupWorkspace(num int, workspace config.Workspace, 
 
 	return nil
 }
-

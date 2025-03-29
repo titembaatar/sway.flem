@@ -4,20 +4,24 @@ import (
 	"fmt"
 	"log"
 	"os/exec"
+	"strings"
 	"time"
 
 	"github.com/titembaatar/sway.flem/internal/config"
 	"github.com/titembaatar/sway.flem/internal/sway"
 )
 
-type AppManager struct {
-	client *sway.Client
-}
-
 func NewAppManager(client *sway.Client) *AppManager {
 	return &AppManager{
 		client: client,
 	}
+}
+
+func MatchAppName(runningApp string, configApp string) bool {
+	runningLower := strings.ToLower(runningApp)
+	configLower := strings.ToLower(configApp)
+
+	return runningLower == configLower
 }
 
 func (am *AppManager) LaunchApp(app config.App, layout string) error {
@@ -47,7 +51,7 @@ func (am *AppManager) LaunchApp(app config.App, layout string) error {
 	for _, ws := range workspaces {
 		apps := ws.FindAllApps()
 		for _, node := range apps {
-			if node.Name == app.Name {
+			if MatchAppName(node.Name, app.Name) {
 				return am.configureApp(node.NodeID, app, layout)
 			}
 		}

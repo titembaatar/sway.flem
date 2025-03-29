@@ -1,39 +1,7 @@
 package sway
 
-type Node struct {
-	ID               int64        `json:"id"`
-	Name             string       `json:"name"`
-	Type             string       `json:"type"`
-	AppID            string       `json:"app_id"`
-	Shell            string       `json:"shell"`
-	Visible          bool         `json:"visible"`
-	Focused          bool         `json:"focused"`
-	WorkspaceNum     int          `json:"num,omitempty"`
-	Rect             Rect         `json:"rect"`
-	Window           *int64       `json:"window"`
-	WindowProperties *WindowProps `json:"window_properties"`
-	Nodes            []Node       `json:"nodes"`
-	FloatingNodes    []Node       `json:"floating_nodes"`
-}
-
-type Rect struct {
-	X      int `json:"x"`
-	Y      int `json:"y"`
-	Width  int `json:"width"`
-	Height int `json:"height"`
-}
-
-type WindowProps struct {
-	Class    string `json:"class"`
-	Instance string `json:"instance"`
-	Title    string `json:"title"`
-}
-
-type AppNode struct {
-	Name     string
-	NodeID   int64
-	Rect     Rect
-	Floating bool
+func isAppNode(node *Node) bool {
+	return node.AppID != "" || (node.WindowProperties != nil && node.WindowProperties.Class != "")
 }
 
 func (n *Node) FindWorkspaces() map[int]*Node {
@@ -62,10 +30,13 @@ func (n *Node) FindAllApps() []AppNode {
 	processNodes = func(node *Node, isFloating bool) {
 
 		if isAppNode(node) {
-			appName := node.AppID
-			if appName == "" && node.WindowProperties != nil {
+			var appName string
+			if node.AppID != "" {
+				// Wayland application
+				appName = node.AppID
+			} else if node.WindowProperties != nil && node.WindowProperties.Class != "" {
 				// X11 application
-				appName = "xwayland:" + node.WindowProperties.Class
+				appName = node.WindowProperties.Class
 			}
 
 			apps = append(apps, AppNode{
@@ -90,8 +61,4 @@ func (n *Node) FindAllApps() []AppNode {
 	processNodes(n, false)
 
 	return apps
-}
-
-func isAppNode(node *Node) bool {
-	return node.AppID != "" || (node.WindowProperties != nil && node.WindowProperties.Class != "")
 }

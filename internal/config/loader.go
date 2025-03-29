@@ -12,6 +12,17 @@ var (
 	ErrNoWorkspaces = errors.New("no workspaces defined in configuration")
 )
 
+func isValidLayout(layout string) bool {
+	validLayouts := map[string]bool{
+		"splith":   true,
+		"splitv":   true,
+		"stacking": true,
+		"tabbed":   true,
+	}
+
+	return validLayouts[layout]
+}
+
 func LoadFromFile(path string) (*Config, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -53,15 +64,4 @@ func validateConfig(config *Config) error {
 	}
 
 	return nil
-}
-
-func isValidLayout(layout string) bool {
-	validLayouts := map[string]bool{
-		"splith":   true,
-		"splitv":   true,
-		"stacking": true,
-		"tabbed":   true,
-	}
-
-	return validLayouts[layout]
 }

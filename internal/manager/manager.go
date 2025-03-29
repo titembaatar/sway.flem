@@ -1,4 +1,3 @@
-// Package manager provides the main orchestration logic for sway.flem
 package manager
 
 import (
@@ -8,11 +7,6 @@ import (
 	"github.com/titembaatar/sway.flem/internal/config"
 	"github.com/titembaatar/sway.flem/internal/sway"
 )
-
-type Manager struct {
-	client *sway.Client
-	config *config.Config
-}
 
 func NewManager(client *sway.Client, cfg *config.Config) *Manager {
 	return &Manager{
