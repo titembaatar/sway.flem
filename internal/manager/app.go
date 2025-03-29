@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"os/exec"
-	"strings"
 	"time"
 
 	"github.com/titembaatar/sway.flem/internal/config"
@@ -15,13 +14,6 @@ func NewAppManager(client *sway.Client) *AppManager {
 	return &AppManager{
 		client: client,
 	}
-}
-
-func MatchAppName(runningApp string, configApp string) bool {
-	runningLower := strings.ToLower(runningApp)
-	configLower := strings.ToLower(configApp)
-
-	return runningLower == configLower
 }
 
 func (am *AppManager) LaunchApp(app config.App, layout string) error {
@@ -38,9 +30,9 @@ func (am *AppManager) LaunchApp(app config.App, layout string) error {
 
 	if app.Delay == 0 {
 		time.Sleep(time.Second)
+	} else {
+		time.Sleep(time.Duration(app.Delay) * time.Second)
 	}
-
-	time.Sleep(time.Duration(app.Delay) * time.Second)
 
 	tree, err := am.client.GetTree()
 	if err != nil {
@@ -51,7 +43,7 @@ func (am *AppManager) LaunchApp(app config.App, layout string) error {
 	for _, ws := range workspaces {
 		apps := ws.FindAllApps()
 		for _, node := range apps {
-			if MatchAppName(node.Name, app.Name) {
+			if sway.MatchAppName(node.Name, app.Name) {
 				return am.configureApp(node.NodeID, app, layout)
 			}
 		}

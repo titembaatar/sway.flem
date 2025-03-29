@@ -69,6 +69,7 @@ func (c *Client) GetWorkspaceInfo(wsNum int) (*WorkspaceInfo, error) {
 	info := &WorkspaceInfo{
 		Number:         wsNum,
 		Layout:         ws.Layout,
+		Output:         ws.Output,
 		Representation: ws.Representation,
 		AppOrder:       ExtractAppOrder(ws.Representation),
 	}

@@ -5,6 +5,7 @@ type Client struct {
 }
 
 // swaymsg -t get_tree --raw response
+
 type Node struct {
 	ID               int64        `json:"id"`
 	Name             string       `json:"name"`
@@ -20,7 +21,8 @@ type Node struct {
 	Nodes            []Node       `json:"nodes"`
 	FloatingNodes    []Node       `json:"floating_nodes"`
 	Representation   string       `json:"representation,omitempty"`
-	Layout           string       `json:"layout"` // Make sure this field exists
+	Layout           string       `json:"layout"`
+	Output           string       `json:"output,omitempty"`
 }
 
 type Rect struct {
@@ -41,6 +43,7 @@ type WindowProps struct {
 type WorkspaceInfo struct {
 	Number         int
 	Layout         string
+	Output         string
 	Representation string
 	AppOrder       []string
 }

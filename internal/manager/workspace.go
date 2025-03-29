@@ -31,7 +31,29 @@ func (wm *WorkspaceManager) SetupWorkspace(num int, workspace config.Workspace, 
 		return fmt.Errorf("switching to workspace: %w", err)
 	}
 
-	// Get current workspace info
+	// Check and handle workspace output assignment
+	if workspace.Output != "" {
+		tree, err := wm.client.GetTree()
+		if err == nil {
+			workspaces := tree.FindWorkspaces()
+			if ws, exists := workspaces[num]; exists {
+				if ws.Output != workspace.Output {
+					log.Printf("Moving workspace %d to output %s (currently on %s)", num, workspace.Output, ws.Output)
+					if err := wm.client.MoveWorkspaceToOutput(num, workspace.Output); err != nil {
+						log.Printf("Warning: Failed to move workspace to output: %v", err)
+					}
+					time.Sleep(200 * time.Millisecond)
+
+					// Switch to the workspace again after moving it
+					if err := wm.client.SwitchToWorkspace(num); err != nil {
+						log.Printf("Warning: Failed to switch to workspace after moving: %v", err)
+					}
+					time.Sleep(100 * time.Millisecond)
+				}
+			}
+		}
+	}
+
 	wsInfo, err := wm.client.GetWorkspaceInfo(num)
 	var currentLayout string
 	var appOrder []string
@@ -39,14 +61,21 @@ func (wm *WorkspaceManager) SetupWorkspace(num int, workspace config.Workspace, 
 	if err == nil && wsInfo != nil {
 		currentLayout = wsInfo.Layout
 		appOrder = wsInfo.AppOrder
+
+		log.Printf("Workspace %d current layout: %s, representation: %s",
+			num, currentLayout, wsInfo.Representation)
+		if len(appOrder) > 0 {
+			log.Printf("Current app order: %v", appOrder)
+		}
 	}
 
-	// Set the layout if it's different from current or not specified
-	if workspace.Layout != "" && workspace.Layout != currentLayout {
+	if workspace.Layout != "" {
+		log.Printf("Setting workspace %d layout to %s (current: %s)", num, workspace.Layout, currentLayout)
 		if err := wm.client.SetWorkspaceLayout(workspace.Layout); err != nil {
 			log.Printf("Warning: Failed to set layout: %v", err)
 		}
-		time.Sleep(100 * time.Millisecond)
+
+		time.Sleep(200 * time.Millisecond)
 	}
 
 	// Process actions
@@ -62,12 +91,12 @@ func (wm *WorkspaceManager) SetupWorkspace(num int, workspace config.Workspace, 
 		appPositions[strings.ToLower(appName)] = i
 	}
 
-	// First pass: Match existing apps with config and determine what needs updates
+	// Match existing apps with config and determine what needs updates
 	for _, configApp := range workspace.Apps {
 		found := false
 
 		for _, currentApp := range currentApps {
-			if MatchAppName(currentApp.Name, configApp.Name) {
+			if sway.MatchAppName(currentApp.Name, configApp.Name) {
 				// App is already running - might need updating
 				found = true
 				matched[currentApp.NodeID] = true

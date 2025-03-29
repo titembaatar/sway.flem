@@ -5,6 +5,10 @@ import (
 	"strings"
 )
 
+func (c *Client) MoveWorkspaceToOutput(num int, output string) error {
+	return c.ExecuteCommand(fmt.Sprintf("workspace number %d, move workspace to output %s", num, output))
+}
+
 func (c *Client) SwitchToWorkspace(num int) error {
 	return c.ExecuteCommand(fmt.Sprintf("workspace number %d", num))
 }
@@ -15,6 +19,14 @@ func (c *Client) SetWorkspaceLayout(layout string) error {
 
 func (c *Client) KillWindow(id int64) error {
 	return c.ExecuteCommand(fmt.Sprintf("[con_id=%d] kill", id))
+}
+
+func (c *Client) SetFloating(id int64, floating bool) error {
+	action := "enable"
+	if !floating {
+		action = "disable"
+	}
+	return c.ExecuteCommand(fmt.Sprintf("[con_id=%d] floating %s", id, action))
 }
 
 func (c *Client) MoveWindow(id int64, position string) error {
@@ -68,12 +80,4 @@ func (c *Client) ResizeWindow(id int64, size string, isFloating bool, layout str
 	}
 
 	return fmt.Errorf("cannot apply size: invalid layout or size format")
-}
-
-func (c *Client) SetFloating(id int64, floating bool) error {
-	action := "enable"
-	if !floating {
-		action = "disable"
-	}
-	return c.ExecuteCommand(fmt.Sprintf("[con_id=%d] floating %s", id, action))
 }

@@ -6,6 +6,13 @@ func isAppNode(node *Node) bool {
 	return node.AppID != "" || (node.WindowProperties != nil && node.WindowProperties.Class != "")
 }
 
+func MatchAppName(runningApp string, configApp string) bool {
+	runningLower := strings.ToLower(runningApp)
+	configLower := strings.ToLower(configApp)
+
+	return runningLower == configLower
+}
+
 func (n *Node) FindWorkspaces() map[int]*Node {
 	workspaces := make(map[int]*Node)
 
@@ -15,6 +22,7 @@ func (n *Node) FindWorkspaces() map[int]*Node {
 			for j := range output.Nodes {
 				workspace := &output.Nodes[j]
 				if workspace.Type == "workspace" && workspace.WorkspaceNum > 0 {
+					workspace.Output = output.Name
 					workspaces[workspace.WorkspaceNum] = workspace
 				}
 			}
@@ -30,7 +38,6 @@ func (n *Node) FindAllApps() []AppNode {
 	var processNodes func(node *Node, isFloating bool)
 
 	processNodes = func(node *Node, isFloating bool) {
-
 		if isAppNode(node) {
 			var appName string
 			if node.AppID != "" {
