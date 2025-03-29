@@ -32,7 +32,11 @@ func (am *AppManager) LaunchApp(app config.App, layout string) error {
 		return fmt.Errorf("launching %s: %w", app.Name, err)
 	}
 
-	time.Sleep(700 * time.Millisecond)
+	if app.Delay == 0 {
+		time.Sleep(time.Second)
+	}
+
+	time.Sleep(time.Duration(app.Delay) * time.Second)
 
 	tree, err := am.client.GetTree()
 	if err != nil {

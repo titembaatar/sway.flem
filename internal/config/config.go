@@ -8,7 +8,7 @@ type App struct {
 	Floating bool     `yaml:"floating,omitempty"` // Floating state
 	Posts    []string `yaml:"post,omitempty"`     // Post-launch commands
 	Launcher string   `yaml:"launcher,omitempty"` // Launcher to use (e.g., "tofi-drun")
-	// Delay    int      `yaml:"delay,omitempty"`    // Delay in milliseconds to wait after launching
+	Delay    int64    `yaml:"delay,omitempty"`    // Delay in seconds to wait after launching
 }
 
 type Workspace struct {
