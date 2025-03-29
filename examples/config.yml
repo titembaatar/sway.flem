@@ -1,0 +1,85 @@
+# sway.flem configuration example
+# This file shows various configuration options and examples
+
+# Set which workspace to focus at startup
+focus_workspace: 1
+
+# Default settings that apply to all workspaces/apps unless overridden
+defaults:
+  default_layout: "splith"  # Default layout for workspaces (splith, splitv, tabbed, stacking)
+  default_output: "DP-1"    # Default output for workspaces
+  default_floating: false   # Whether apps should be floating by default
+
+# Workspace configurations
+workspaces:
+  # Workspace 1: Development
+  1:
+    layout: "splith"  # Horizontal split layout
+    output: "DP-1"    # Primary display
+    apps:
+      - name: "kitty"
+        command: "kitty --title 'Terminal'"
+        size: "50ppt"  # 50% of workspace width
+        posts:         # Commands to run after app launches
+          - "tmux"
+
+      - name: "code"
+        command: "code"
+        size: "50ppt"  # 50% of workspace width
+
+  # Workspace 2: Web
+  2:
+    layout: "tabbed"  # Tabbed layout
+    output: "DP-1"    # Primary display
+    apps:
+      - name: "firefox"
+        command: "firefox"
+
+      - name: "chromium"
+        command: "chromium"
+
+  # Workspace 3: Communication
+  3:
+    layout: "splitv"  # Vertical split layout
+    output: "DP-2"    # Secondary display
+    apps:
+      - name: "Slack"
+        command: "slack"
+        size: "60ppt 100ppt"  # 60% height, full width
+
+      - name: "discord"
+        command: "discord"
+        size: "40ppt 100ppt"  # 40% height, full width
+
+  # Workspace 4: Media
+  4:
+    layout: "stacking"  # Stacked layout
+    output: "DP-2"       # Secondary display
+    apps:
+      - name: "Spotify"
+        command: "spotify"
+
+      - name: "mpv"
+        command: "mpv"
+        floating: true  # Make this window floating
+        size: "800 600"  # 800x600 pixels
+        position: "center"  # Center on the screen
+
+  # Workspace 5: Utilities with various floating windows
+  5:
+    output: "DP-1"
+    close_unmatched: true  # Close windows not defined in the config
+    apps:
+      - name: "pavucontrol"
+        floating: true
+        position: "right"
+        size: "400 600"
+
+      - name: "gnome-calculator"
+        floating: true
+        position: "center"
+
+      - name: "thunar"
+        command: "thunar"
+        position: "left"
+        size: "50ppt 100ppt"

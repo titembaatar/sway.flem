@@ -58,7 +58,7 @@ type WorkspaceInfo struct {
 	AppOrder       []string
 }
 
-// LayoutType constants
+// LayoutType constants for different layout types
 type LayoutType string
 
 const (
@@ -68,7 +68,7 @@ const (
 	LayoutTypeTabbed     LayoutType = "tabbed"
 )
 
-// Representation of an application
+// AppNode represents an application in the Sway tree
 type AppNode struct {
 	Name     string
 	NodeID   int64

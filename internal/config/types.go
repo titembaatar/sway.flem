@@ -21,12 +21,12 @@ type Workspace struct {
 }
 
 type App struct {
-	Name     string   `yaml:"name"`
-	Command  string   `yaml:"command,omitempty"`
-	Size     string   `yaml:"size,omitempty"`
-	Position string   `yaml:"position,omitempty"`
-	Floating bool     `yaml:"floating,omitempty"`
-	Posts    []string `yaml:"post,omitempty"`
-	Launcher string   `yaml:"launcher,omitempty"`
-	Delay    int64    `yaml:"delay,omitempty"`
+	Name     string   `yaml:"name"`               // Name of the app (required)
+	Command  string   `yaml:"command,omitempty"`  // Command to launch the app (defaults to Name if empty)
+	Size     string   `yaml:"size,omitempty"`     // Size of the app window, e.g. "800x600" or "50ppt 70ppt"
+	Position string   `yaml:"position,omitempty"` // Position of the app window, e.g. "center", "top", "0 0"
+	Floating bool     `yaml:"floating,omitempty"` // Whether the app should be floating or tiled
+	Posts    []string `yaml:"post,omitempty"`     // Commands to run after launching the app
+	Launcher string   `yaml:"launcher,omitempty"` // Custom launcher to use (if any)
+	Delay    int64    `yaml:"delay,omitempty"`    // Delay in seconds before configuring the app
 }

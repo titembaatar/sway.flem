@@ -1,26 +1,18 @@
-package core
+package manager
 
 import (
 	"fmt"
 	"log"
 
-	"github.com/titembaatar/sway.flem/internal/app"
 	"github.com/titembaatar/sway.flem/internal/config"
 	"github.com/titembaatar/sway.flem/internal/sway"
-	"github.com/titembaatar/sway.flem/internal/workspace"
 )
 
-func NewManager(config *config.Config, swayClient *sway.Client, verbose bool) *Manager {
-	appManager := app.NewManager(swayClient, verbose)
-
-	workspaceManager := workspace.NewManager(swayClient, appManager, verbose)
-
+func NewManager(cfg *config.Config, swayClient *sway.Client, verbose bool) *Manager {
 	return &Manager{
-		Config:           config,
-		SwayClient:       swayClient,
-		WorkspaceManager: workspaceManager,
-		AppManager:       appManager,
-		Verbose:          verbose,
+		Config:  cfg,
+		Client:  swayClient,
+		Verbose: verbose,
 	}
 }
 
@@ -29,7 +21,7 @@ func (m *Manager) Run() error {
 		log.Println("Starting sway.flem workspace management")
 	}
 
-	tree, err := m.SwayClient.GetTree()
+	tree, err := m.Client.GetTree()
 	if err != nil {
 		return fmt.Errorf("getting workspace tree: %w", err)
 	}
@@ -46,9 +38,8 @@ func (m *Manager) Run() error {
 			currentApps = ws.FindAllApps()
 		}
 
-		if err := m.WorkspaceManager.SetupWorkspace(wsNum, wsConfig, currentApps); err != nil {
+		if err := m.SetupWorkspace(wsNum, wsConfig, currentApps); err != nil {
 			log.Printf("Error setting up workspace %d: %v", wsNum, err)
-			// Continue with other workspaces instead of failing entirely
 		}
 	}
 
@@ -57,7 +48,7 @@ func (m *Manager) Run() error {
 			log.Printf("Focusing workspace %d", m.Config.FocusWorkspace)
 		}
 
-		if err := m.SwayClient.SwitchToWorkspace(m.Config.FocusWorkspace); err != nil {
+		if err := m.Client.SwitchToWorkspace(m.Config.FocusWorkspace); err != nil {
 			return fmt.Errorf("focusing workspace %d: %w", m.Config.FocusWorkspace, err)
 		}
 	}
@@ -82,6 +73,6 @@ func (m *Manager) Validate() error {
 }
 
 func (m *Manager) isSwayRunning() bool {
-	_, err := m.SwayClient.GetTree()
+	_, err := m.Client.GetTree()
 	return err == nil
 }

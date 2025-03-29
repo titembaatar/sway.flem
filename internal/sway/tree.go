@@ -98,4 +98,3 @@ func GetLayoutTypeFromRepresentation(repr string) string {
 		return ""
 	}
 }
-

@@ -64,7 +64,7 @@ func (c *Client) ResizeWindow(id int64, size string, isFloating bool, layout str
 
 	switch layout {
 	case "tabbed", "stacking":
-		return nil
+		return nil // These layouts don't support resizing individual windows
 	case "splitv":
 		// In vertical split, only set height
 		if len(parts) == 1 {

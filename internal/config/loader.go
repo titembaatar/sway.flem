@@ -27,34 +27,7 @@ func LoadFromBytes(data []byte) (*Config, error) {
 		return nil, fmt.Errorf("validating config: %w", err)
 	}
 
-	// Set default values if needed
-	applyDefaults(&config)
+	ApplyDefaults(&config)
 
 	return &config, nil
-}
-
-func applyDefaults(config *Config) {
-	for num, workspace := range config.Workspaces {
-		if workspace.Layout == "" && config.Defaults.DefaultLayout != "" {
-			workspace.Layout = config.Defaults.DefaultLayout
-			config.Workspaces[num] = workspace
-		}
-
-		if workspace.Output == "" && config.Defaults.DefaultOutput != "" {
-			workspace.Output = config.Defaults.DefaultOutput
-			config.Workspaces[num] = workspace
-		}
-
-		for i, app := range workspace.Apps {
-			if app.Command == "" {
-				app.Command = app.Name
-				workspace.Apps[i] = app
-			}
-
-			if !app.Floating && config.Defaults.DefaultFloating {
-				app.Floating = true
-				workspace.Apps[i] = app
-			}
-		}
-	}
 }

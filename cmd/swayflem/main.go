@@ -9,7 +9,7 @@ import (
 	"syscall"
 
 	"github.com/titembaatar/sway.flem/internal/config"
-	"github.com/titembaatar/sway.flem/internal/core"
+	"github.com/titembaatar/sway.flem/internal/manager"
 	"github.com/titembaatar/sway.flem/internal/sway"
 )
 
@@ -42,15 +42,15 @@ func main() {
 
 	swayClient := sway.NewClient(*verbose)
 
-	manager := core.NewManager(cfg, swayClient, *verbose)
+	mgr := manager.NewManager(cfg, swayClient, *verbose)
 
-	if err := manager.Validate(); err != nil {
+	if err := mgr.Validate(); err != nil {
 		log.Fatalf("Validation failed: %v", err)
 	}
 
 	setupSignalHandling()
 
-	if err := manager.Run(); err != nil {
+	if err := mgr.Run(); err != nil {
 		log.Fatalf("Error running manager: %v", err)
 	}
 
