@@ -3,7 +3,6 @@ package manager
 import (
 	"fmt"
 	"log"
-	"strings"
 
 	"github.com/titembaatar/sway.flem/internal/config"
 	"github.com/titembaatar/sway.flem/internal/sway"
@@ -82,8 +81,6 @@ func (m *Manager) configureApps(appIDs map[string]int64, updateApps []AppUpdate,
 
 	m.configureAppSizes(appIDs, updateApps, configApps, layout)
 
-	m.configureAppPositions(appIDs, updateApps, configApps, layout)
-
 	m.runPostCommands(appIDs, updateApps, configApps)
 }
 
@@ -129,117 +126,6 @@ func (m *Manager) configureAppSizes(appIDs map[string]int64, updateApps []AppUpd
 	}
 }
 
-func (m *Manager) configureAppPositions(appIDs map[string]int64, updateApps []AppUpdate, configApps []config.App, layout string) {
-	m.logVerbose("Positioning windows")
-
-	m.positionFloatingApps(appIDs, updateApps, configApps)
-
-	m.positionTiledApps(appIDs, updateApps, configApps, layout)
-}
-
-func (m *Manager) positionFloatingApps(appIDs map[string]int64, updateApps []AppUpdate, configApps []config.App) {
-	for appName, nodeID := range appIDs {
-		app := FindAppByName(configApps, appName)
-		if app.Floating && app.Position != "" {
-			if err := m.PositionApp(nodeID, app); err != nil {
-				log.Printf("Warning: Failed to position floating app %s: %v", appName, err)
-			}
-			m.delay(100)
-		}
-	}
-
-	for _, update := range updateApps {
-		if update.Config.Floating && update.Config.Position != "" {
-			if err := m.PositionApp(update.NodeID, update.Config); err != nil {
-				log.Printf("Warning: Failed to position existing floating app: %v", err)
-			}
-			m.delay(100)
-		}
-	}
-}
-
-func (m *Manager) positionTiledApps(appIDs map[string]int64, updateApps []AppUpdate, configApps []config.App, layout string) {
-	if layout == "splitv" {
-		topApps := make([]AppPosition, 0)
-		middleApps := make([]AppPosition, 0)
-		bottomApps := make([]AppPosition, 0)
-
-		for appName, nodeID := range appIDs {
-			app := FindAppByName(configApps, appName)
-			if !app.Floating && app.Position != "" {
-				pos := getPositionType(app.Position)
-				appPos := AppPosition{NodeID: nodeID, App: app}
-
-				switch pos {
-				case "top":
-					topApps = append(topApps, appPos)
-				case "middle", "center":
-					middleApps = append(middleApps, appPos)
-				case "bottom":
-					bottomApps = append(bottomApps, appPos)
-				}
-			}
-		}
-
-		for _, update := range updateApps {
-			if !update.Config.Floating && update.Config.Position != "" {
-				pos := getPositionType(update.Config.Position)
-				appPos := AppPosition{NodeID: update.NodeID, App: update.Config}
-
-				switch pos {
-				case "top":
-					topApps = append(topApps, appPos)
-				case "middle", "center":
-					middleApps = append(middleApps, appPos)
-				case "bottom":
-					bottomApps = append(bottomApps, appPos)
-				}
-			}
-		}
-
-		m.applyVerticalOrdering(topApps, middleApps, bottomApps)
-	} else if layout == "splith" {
-		leftApps := make([]AppPosition, 0)
-		middleApps := make([]AppPosition, 0)
-		rightApps := make([]AppPosition, 0)
-
-		for appName, nodeID := range appIDs {
-			app := FindAppByName(configApps, appName)
-			if !app.Floating && app.Position != "" {
-				pos := getPositionType(app.Position)
-				appPos := AppPosition{NodeID: nodeID, App: app}
-
-				switch pos {
-				case "left":
-					leftApps = append(leftApps, appPos)
-				case "middle", "center":
-					middleApps = append(middleApps, appPos)
-				case "right":
-					rightApps = append(rightApps, appPos)
-				}
-			}
-		}
-
-		for _, update := range updateApps {
-			if !update.Config.Floating && update.Config.Position != "" {
-				pos := getPositionType(update.Config.Position)
-				appPos := AppPosition{NodeID: update.NodeID, App: update.Config}
-
-				switch pos {
-				case "left":
-					leftApps = append(leftApps, appPos)
-				case "middle", "center":
-					middleApps = append(middleApps, appPos)
-				case "right":
-					rightApps = append(rightApps, appPos)
-				}
-			}
-		}
-
-		m.applyHorizontalOrdering(leftApps, middleApps, rightApps)
-	}
-}
-
 func (m *Manager) runPostCommands(appIDs map[string]int64, updateApps []AppUpdate, configApps []config.App) {
 	m.logVerbose("Running post-launch commands")
 
@@ -258,81 +144,6 @@ func (m *Manager) runPostCommands(appIDs map[string]int64, updateApps []AppUpdat
 				log.Printf("Warning: Failed to run post commands for existing app: %v", err)
 			}
 		}
-	}
-}
-
-type AppPosition struct {
-	NodeID int64
-	App    config.App
-}
-
-func getPositionType(position string) string {
-	position = strings.ToLower(position)
-
-	if position == "top" || position == "up" {
-		return "top"
-	} else if position == "bottom" || position == "down" {
-		return "bottom"
-	} else if position == "left" {
-		return "left"
-	} else if position == "right" {
-		return "right"
-	} else if position == "middle" || position == "center" {
-		return "middle"
-	}
-
-	return position
-}
-
-func (m *Manager) applyVerticalOrdering(topApps, middleApps, bottomApps []AppPosition) {
-	for _, app := range bottomApps {
-		m.logVerbose("Moving app to bottom position: %s (ID: %d)", app.App.Name, app.NodeID)
-		if err := m.Client.ExecuteCommand(fmt.Sprintf("[con_id=%d] move position 0 999999", app.NodeID)); err != nil {
-			log.Printf("Warning: Failed to position app at bottom: %v", err)
-		}
-		m.delay(100)
-	}
-
-	for _, app := range middleApps {
-		m.logVerbose("Moving app to middle position: %s (ID: %d)", app.App.Name, app.NodeID)
-		if err := m.Client.ExecuteCommand(fmt.Sprintf("[con_id=%d] move position center", app.NodeID)); err != nil {
-			log.Printf("Warning: Failed to position app at middle: %v", err)
-		}
-		m.delay(100)
-	}
-
-	for _, app := range topApps {
-		m.logVerbose("Moving app to top position: %s (ID: %d)", app.App.Name, app.NodeID)
-		if err := m.Client.ExecuteCommand(fmt.Sprintf("[con_id=%d] move position 0 0", app.NodeID)); err != nil {
-			log.Printf("Warning: Failed to position app at top: %v", err)
-		}
-		m.delay(100)
-	}
-}
-
-func (m *Manager) applyHorizontalOrdering(leftApps, middleApps, rightApps []AppPosition) {
-	for _, app := range rightApps {
-		m.logVerbose("Moving app to right position: %s (ID: %d)", app.App.Name, app.NodeID)
-		if err := m.Client.ExecuteCommand(fmt.Sprintf("[con_id=%d] move position 999999 center", app.NodeID)); err != nil {
-			log.Printf("Warning: Failed to position app to right: %v", err)
-		}
-		m.delay(100)
-	}
-
-	for _, app := range middleApps {
-		m.logVerbose("Moving app to middle position: %s (ID: %d)", app.App.Name, app.NodeID)
-		if err := m.Client.ExecuteCommand(fmt.Sprintf("[con_id=%d] move position center", app.NodeID)); err != nil {
-			log.Printf("Warning: Failed to position app to middle: %v", err)
-		}
-		m.delay(100)
-	}
-
-	for _, app := range leftApps {
-		m.logVerbose("Moving app to left position: %s (ID: %d)", app.App.Name, app.NodeID)
-		if err := m.Client.ExecuteCommand(fmt.Sprintf("[con_id=%d] move position 0 center", app.NodeID)); err != nil {
-			log.Printf("Warning: Failed to position app to left: %v", err)
-		}
-		m.delay(100)
 	}
 }
 
@@ -370,9 +181,7 @@ func (m *Manager) categorizeApps(configApps []config.App, currentApps []sway.App
 				found = true
 				matched[currentApp.NodeID] = true
 
-				needsUpdate := configApp.Floating != currentApp.Floating ||
-					configApp.Size != "" ||
-					(configApp.Position != "" && configApp.Floating)
+				needsUpdate := configApp.Floating != currentApp.Floating || configApp.Size != ""
 
 				if needsUpdate {
 					updateApps = append(updateApps, AppUpdate{

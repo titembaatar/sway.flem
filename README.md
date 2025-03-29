@@ -10,11 +10,10 @@ when launching or reloading SwayWM.
 - Launch applications in specific workspaces
 - Configure window properties:
   - Floating state
-  - Position
   - Size
 - Run post-launch commands
 - Support for both Wayland and X11 applications
-- Gracefully handle existing applications (close, reposition, resize)
+- Gracefully handle existing applications (close, resize)
 
 ## 🔧 Installation
 
@@ -83,7 +82,6 @@ workspaces:
       - name: "app_name_1"  # app_id for Wayland or class for X11
         command: "cmd_to_launch_app"  # Optional if same as name
         size: "20ppt 100ppt"  # width height (optional)
-        position: "center"  # (optional)
         floating: true  # Set window to floating mode (optional)
         posts:  # Commands to run after app launches
           - "cmd 1"
@@ -108,9 +106,6 @@ workspaces:
   - In `splitv` layouts, only height is applied
   - In `splith` layouts, only width is applied
   - In `tabbed`/`stacking` layouts, resize has no effect
-- `position`: The position of the app window
-  - Can be `center`, `top`, `bottom`, `left`, `right`, or specific coordinates
-  - Only applies to floating windows
 - `floating`: Whether the window should be floating
 - `posts`: Commands to run after launching the app
 - `delay`: Delay in seconds before configuring the app (useful for slow-starting apps)

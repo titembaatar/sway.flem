@@ -1,70 +1,11 @@
 package manager
 
 import (
-	"sort"
 	"strings"
 
 	"github.com/titembaatar/sway.flem/internal/config"
 	"github.com/titembaatar/sway.flem/internal/sway"
 )
-
-func (m *Manager) GetAppPosition(positions map[string]int, appName string) int {
-	pos, found := positions[strings.ToLower(appName)]
-	if found {
-		return pos
-	}
-
-	return -1
-}
-
-func (m *Manager) OrderAppsByLayout(apps []config.App, representation string) []config.App {
-	if representation == "" {
-		return apps
-	}
-
-	// Get app order from representation
-	appOrder := sway.ExtractAppOrder(representation)
-	if len(appOrder) == 0 {
-		return apps
-	}
-
-	positions := make(map[string]int)
-	for i, appName := range appOrder {
-		positions[strings.ToLower(appName)] = i
-	}
-
-	orderedApps := make([]OrderedApp, 0, len(apps))
-	for _, app := range apps {
-		pos := m.GetAppPosition(positions, app.Name)
-		orderedApps = append(orderedApps, OrderedApp{
-			App:      app,
-			Position: pos,
-		})
-	}
-
-	// Sort the apps by their position
-	sort.Slice(orderedApps, func(i, j int) bool {
-		if orderedApps[i].Position >= 0 && orderedApps[j].Position >= 0 {
-			return orderedApps[i].Position < orderedApps[j].Position
-		}
-
-		if orderedApps[i].Position >= 0 {
-			return true
-		}
-		if orderedApps[j].Position >= 0 {
-			return false
-		}
-
-		return i < j
-	})
-
-	result := make([]config.App, len(orderedApps))
-	for i, ordered := range orderedApps {
-		result[i] = ordered.App
-	}
-
-	return result
-}
 
 func (m *Manager) ParseLayoutRepresentation(repr string) *LayoutNode {
 	if repr == "" {
@@ -114,7 +55,6 @@ func (m *Manager) DetermineOptimalLayout(apps []config.App, defaultLayout string
 	}
 
 	if len(apps) == 1 {
-		// For a single app, default to splith
 		return "splith"
 	}
 
@@ -125,7 +65,6 @@ func (m *Manager) DetermineOptimalLayout(apps []config.App, defaultLayout string
 		}
 	}
 
-	// If all apps are floating, layout doesn't matter
 	if floatingCount == len(apps) {
 		return defaultLayout
 	}

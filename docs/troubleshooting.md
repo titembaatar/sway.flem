@@ -28,10 +28,10 @@ or place your configuration file at the default location `./sway.flem.yaml`.
 
 ## Windows Not Properly Configured
 
-**Issue:** Windows start but aren't positioned or sized correctly
+**Issue:** Windows start but aren't sized correctly
 
 **Solutions:**
-- Verify your size/position syntax is correct
+- Verify your size syntax is correct
 - Check if the app's window type supports the operation (some windows resist resizing)
 - Increase the delay value for slow-starting applications
 - Run with `--verbose` to check for errors during configuration

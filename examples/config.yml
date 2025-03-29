@@ -63,7 +63,6 @@ workspaces:
         command: "mpv"
         floating: true  # Make this window floating
         size: "800 600"  # 800x600 pixels
-        position: "center"  # Center on the screen
 
   # Workspace 5: Utilities with various floating windows
   5:
@@ -72,14 +71,11 @@ workspaces:
     apps:
       - name: "pavucontrol"
         floating: true
-        position: "right"
         size: "400 600"
 
       - name: "gnome-calculator"
         floating: true
-        position: "center"
 
       - name: "thunar"
         command: "thunar"
-        position: "left"
         size: "50ppt 100ppt"

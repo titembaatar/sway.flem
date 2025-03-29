@@ -82,20 +82,6 @@ func (m *Manager) ResizeApp(nodeID int64, app config.App, layout string) error {
 	return nil
 }
 
-func (m *Manager) PositionApp(nodeID int64, app config.App) error {
-	if app.Position == "" {
-		return nil // Nothing to do
-	}
-
-	m.logVerbose("Positioning app: %s (ID: %d) to position: %s", app.Name, nodeID, app.Position)
-
-	if err := m.Client.MoveWindow(nodeID, app.Position); err != nil {
-		return fmt.Errorf("setting position: %w", err)
-	}
-
-	return nil
-}
-
 func (m *Manager) SetFloatingState(nodeID int64, app config.App) error {
 	m.logVerbose("Setting floating state for app: %s (ID: %d) to: %v", app.Name, nodeID, app.Floating)
 

@@ -18,10 +18,8 @@ type AppUpdate struct {
 	Config config.App
 }
 
-// App with its position in the layout
 type OrderedApp struct {
-	App      config.App
-	Position int
+	App config.App
 }
 
 // Layout node in a workspace
@@ -41,7 +39,6 @@ type AppLaunchOptions struct {
 type AppUpdateOptions struct {
 	Floating bool
 	Size     string
-	Position string
 	Layout   string
 	PostCmds []string
 }

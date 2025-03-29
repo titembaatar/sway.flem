@@ -29,28 +29,6 @@ func (c *Client) SetFloating(id int64, floating bool) error {
 	return c.ExecuteCommand(fmt.Sprintf("[con_id=%d] floating %s", id, action))
 }
 
-func (c *Client) MoveWindow(id int64, position string) error {
-	var cmd string
-
-	switch position {
-	case "top":
-		cmd = fmt.Sprintf("[con_id=%d] move position 0 0", id)
-	case "bottom":
-		cmd = fmt.Sprintf("[con_id=%d] move position 0 999999", id)
-	case "left":
-		cmd = fmt.Sprintf("[con_id=%d] move position 0 center", id)
-	case "right":
-		cmd = fmt.Sprintf("[con_id=%d] move position 999999 center", id)
-	case "center", "middle":
-		cmd = fmt.Sprintf("[con_id=%d] move position center", id)
-	default:
-		// Assume coordinates
-		cmd = fmt.Sprintf("[con_id=%d] move position %s", id, position)
-	}
-
-	return c.ExecuteCommand(cmd)
-}
-
 func (c *Client) ResizeWindow(id int64, size string, isFloating bool, layout string) error {
 	parts := strings.Fields(size)
 

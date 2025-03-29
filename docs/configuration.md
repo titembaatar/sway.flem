@@ -30,7 +30,6 @@ workspaces:
       - name: "app_name_1"  # app_id for Wayland or class for X11
         command: "cmd_to_launch_app"  # Optional if same as name
         size: "20ppt 100ppt"  # width height (optional)
-        position: "center"  # (optional)
         floating: true  # Set window to floating mode (optional)
         posts:  # Commands to run after app launches
           - "cmd 1"
@@ -60,18 +59,6 @@ sway.flem supports the following layout types:
 - `splitv` - Vertical split (windows stacked vertically)
 - `tabbed` - Tabbed layout (only one window visible at a time, with tabs to switch)
 - `stacking` - Stacked layout (similar to tabbed, but with window titles stacked)
-
-## Position Values
-
-The following position values are supported:
-
-- `center` or `middle` - Center the window
-- `top` - Top of the screen
-- `bottom` - Bottom of the screen
-- `left` - Left side of the screen
-- `right` - Right side of the screen
-- `pointer`, `cursor`, or `mouse` - Position at the cursor
-- Custom coordinates (e.g., `100 200` for x=100, y=200)
 
 ## Size Specification
 

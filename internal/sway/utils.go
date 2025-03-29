@@ -11,26 +11,6 @@ func IsNumericWorkspace(name string) bool {
 	return regexp.MustCompile(`^\d+$`).MatchString(name)
 }
 
-func FormatPosition(position string) string {
-	specialPositions := map[string]string{
-		"center":  "center",
-		"middle":  "center",
-		"top":     "0 0",
-		"bottom":  "0 999999",
-		"left":    "0 center",
-		"right":   "999999 center",
-		"pointer": "cursor",
-		"cursor":  "cursor",
-		"mouse":   "cursor",
-	}
-
-	if formatted, ok := specialPositions[strings.ToLower(position)]; ok {
-		return formatted
-	}
-
-	return position
-}
-
 func (c *Client) WaitForWindowAppearance(appName string, timeoutSec int) (int64, error) {
 	start := time.Now()
 	timeoutDuration := time.Duration(timeoutSec) * time.Second
