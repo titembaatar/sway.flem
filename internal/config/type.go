@@ -12,8 +12,9 @@ type App struct {
 }
 
 type Workspace struct {
-	Layout string `yaml:"layout,omitempty"` // Workspace layout
-	Apps   []App  `yaml:"apps"`             // Apps in this workspace
+	Layout         string `yaml:"layout,omitempty"`     // Workspace layout
+	CloseUnmatched bool   `yaml:"close_unmatched,true"` // Close apps not in config
+	Apps           []App  `yaml:"apps"`                 // Apps in this workspace
 }
 
 type Config struct {

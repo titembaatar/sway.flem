@@ -28,7 +28,6 @@ func (wm *WorkspaceManager) SetupWorkspace(num int, workspace config.Workspace, 
 	}
 
 	// Process actions
-	var closeIDs []int64
 	var updateApps []AppUpdate
 	var launchApps []config.App
 
@@ -66,19 +65,18 @@ func (wm *WorkspaceManager) SetupWorkspace(num int, workspace config.Workspace, 
 		}
 	}
 
-	for _, currentApp := range currentApps {
-		if !matched[currentApp.NodeID] {
-			closeIDs = append(closeIDs, currentApp.NodeID)
+	// Close apps that aren't in config (but only if configured to do so)
+	if workspace.CloseUnmatched {
+		for _, currentApp := range currentApps {
+			if !matched[currentApp.NodeID] {
+				log.Printf("Closing app %s (ID: %d) because it's not in workspace config",
+					currentApp.Name, currentApp.NodeID)
+				if err := wm.client.KillWindow(currentApp.NodeID); err != nil {
+					log.Printf("Warning: Failed to close app: %v", err)
+				}
+				time.Sleep(200 * time.Millisecond)
+			}
 		}
-	}
-
-	// Close apps that aren't in config
-	for _, id := range closeIDs {
-		log.Printf("Closing app with ID %d", id)
-		if err := wm.client.KillWindow(id); err != nil {
-			log.Printf("Warning: Failed to close app: %v", err)
-		}
-		time.Sleep(200 * time.Millisecond)
 	}
 
 	appManager := NewAppManager(wm.client)
