@@ -1,11 +1,20 @@
 package sway
 
+import (
+	"errors"
+)
+
+// Error constants
+var (
+	ErrCommandFailed = errors.New("sway command failed")
+)
+
+// Client for Sway IPC communication
 type Client struct {
-	verbose bool
+	Verbose bool
 }
 
-// swaymsg -t get_tree --raw response
-
+// Node in the Sway tree
 type Node struct {
 	ID               int64        `json:"id"`
 	Name             string       `json:"name"`
@@ -25,6 +34,7 @@ type Node struct {
 	Output           string       `json:"output,omitempty"`
 }
 
+// Rectangle with position and size
 type Rect struct {
 	X      int `json:"x"`
 	Y      int `json:"y"`
@@ -32,14 +42,14 @@ type Rect struct {
 	Height int `json:"height"`
 }
 
+// Window metadata
 type WindowProps struct {
 	Class    string `json:"class"`
 	Instance string `json:"instance"`
 	Title    string `json:"title"`
 }
 
-// Workspaces
-
+// Workspace details
 type WorkspaceInfo struct {
 	Number         int
 	Layout         string
@@ -48,11 +58,7 @@ type WorkspaceInfo struct {
 	AppOrder       []string
 }
 
-type LayoutNode struct {
-	Type     string   // "V", "H", "S", "T", or app name
-	Children []string // App names in this container
-}
-
+// LayoutType constants
 type LayoutType string
 
 const (
@@ -62,8 +68,7 @@ const (
 	LayoutTypeTabbed     LayoutType = "tabbed"
 )
 
-// Apps
-
+// Representation of an application
 type AppNode struct {
 	Name     string
 	NodeID   int64

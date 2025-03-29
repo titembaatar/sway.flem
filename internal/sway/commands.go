@@ -66,14 +66,14 @@ func (c *Client) ResizeWindow(id int64, size string, isFloating bool, layout str
 	case "tabbed", "stacking":
 		return nil
 	case "splitv":
-		// In vertical split, we can only set height
+		// In vertical split, only set height
 		if len(parts) == 1 {
 			return c.ExecuteCommand(fmt.Sprintf("[con_id=%d] resize set height %s", id, parts[0]))
 		} else if len(parts) >= 2 {
 			return c.ExecuteCommand(fmt.Sprintf("[con_id=%d] resize set height %s", id, parts[1]))
 		}
 	case "splith", "":
-		// In horizontal split (default), we can only set width
+		// In horizontal split, only set width
 		if len(parts) >= 1 {
 			return c.ExecuteCommand(fmt.Sprintf("[con_id=%d] resize set width %s", id, parts[0]))
 		}

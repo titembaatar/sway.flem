@@ -2,24 +2,19 @@ package sway
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"log"
 	"os/exec"
 )
 
-var (
-	ErrCommandFailed = errors.New("sway command failed")
-)
-
 func NewClient(verbose bool) *Client {
 	return &Client{
-		verbose: verbose,
+		Verbose: verbose,
 	}
 }
 
 func (c *Client) ExecuteCommand(cmd string) error {
-	if c.verbose {
+	if c.Verbose {
 		log.Printf("Executing: swaymsg %s\n", cmd)
 	}
 
@@ -32,7 +27,7 @@ func (c *Client) ExecuteCommand(cmd string) error {
 }
 
 func (c *Client) GetTree() (*Node, error) {
-	if c.verbose {
+	if c.Verbose {
 		log.Println("Getting Sway tree")
 	}
 
@@ -51,7 +46,7 @@ func (c *Client) GetTree() (*Node, error) {
 }
 
 func (c *Client) GetWorkspaceInfo(wsNum int) (*WorkspaceInfo, error) {
-	if c.verbose {
+	if c.Verbose {
 		log.Printf("Getting info for workspace %d", wsNum)
 	}
 
@@ -75,4 +70,30 @@ func (c *Client) GetWorkspaceInfo(wsNum int) (*WorkspaceInfo, error) {
 	}
 
 	return info, nil
+}
+
+func (c *Client) GetOutputs() ([]string, error) {
+	cmd := exec.Command("swaymsg", "-t", "get_outputs", "--raw")
+	output, err := cmd.Output()
+	if err != nil {
+		return nil, fmt.Errorf("getting outputs: %w", err)
+	}
+
+	var outputs []struct {
+		Name string `json:"name"`
+	}
+
+	if err := json.Unmarshal(output, &outputs); err != nil {
+		return nil, fmt.Errorf("parsing outputs: %w", err)
+	}
+
+	var outputNames []string
+	for _, output := range outputs {
+		// Skip special outputs like __i3
+		if output.Name != "__i3" {
+			outputNames = append(outputNames, output.Name)
+		}
+	}
+
+	return outputNames, nil
 }

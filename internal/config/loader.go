@@ -1,27 +1,11 @@
 package config
 
 import (
-	"errors"
 	"fmt"
 	"os"
 
 	"gopkg.in/yaml.v3"
 )
-
-var (
-	ErrNoWorkspaces = errors.New("no workspaces defined in configuration")
-)
-
-func isValidLayout(layout string) bool {
-	validLayouts := map[string]bool{
-		"splith":   true,
-		"splitv":   true,
-		"stacking": true,
-		"tabbed":   true,
-	}
-
-	return validLayouts[layout]
-}
 
 func LoadFromFile(path string) (*Config, error) {
 	data, err := os.ReadFile(path)
@@ -39,29 +23,38 @@ func LoadFromBytes(data []byte) (*Config, error) {
 		return nil, fmt.Errorf("parsing YAML: %w", err)
 	}
 
-	if err := validateConfig(&config); err != nil {
+	if err := ValidateConfig(&config); err != nil {
 		return nil, fmt.Errorf("validating config: %w", err)
 	}
+
+	// Set default values if needed
+	applyDefaults(&config)
 
 	return &config, nil
 }
 
-func validateConfig(config *Config) error {
-	if len(config.Workspaces) == 0 {
-		return ErrNoWorkspaces
-	}
-
-	for wsNum, workspace := range config.Workspaces {
-		if len(workspace.Apps) == 0 {
-			return fmt.Errorf("workspace %d has no apps defined", wsNum)
+func applyDefaults(config *Config) {
+	for num, workspace := range config.Workspaces {
+		if workspace.Layout == "" && config.Defaults.DefaultLayout != "" {
+			workspace.Layout = config.Defaults.DefaultLayout
+			config.Workspaces[num] = workspace
 		}
 
-		if workspace.Layout != "" {
-			if !isValidLayout(workspace.Layout) {
-				return fmt.Errorf("workspace %d: invalid layout '%s'", wsNum, workspace.Layout)
+		if workspace.Output == "" && config.Defaults.DefaultOutput != "" {
+			workspace.Output = config.Defaults.DefaultOutput
+			config.Workspaces[num] = workspace
+		}
+
+		for i, app := range workspace.Apps {
+			if app.Command == "" {
+				app.Command = app.Name
+				workspace.Apps[i] = app
+			}
+
+			if !app.Floating && config.Defaults.DefaultFloating {
+				app.Floating = true
+				workspace.Apps[i] = app
 			}
 		}
 	}
-
-	return nil
 }
