@@ -18,7 +18,7 @@ func (c *Client) SetWorkspaceLayout(layout string) error {
 }
 
 func (c *Client) KillWindow(id int64) error {
-	return c.ExecuteCommand(fmt.Sprintf("[con_id=%d] kill", id))
+	return c.ExecuteCommand(fmt.Sprintf("[id=%d] kill", id))
 }
 
 func (c *Client) SetFloating(id int64, floating bool) error {
@@ -26,7 +26,7 @@ func (c *Client) SetFloating(id int64, floating bool) error {
 	if !floating {
 		action = "disable"
 	}
-	return c.ExecuteCommand(fmt.Sprintf("[con_id=%d] floating %s", id, action))
+	return c.ExecuteCommand(fmt.Sprintf("[id=%d] floating %s", id, action))
 }
 
 func (c *Client) ResizeWindow(id int64, size string, isFloating bool, layout string) error {
@@ -35,9 +35,9 @@ func (c *Client) ResizeWindow(id int64, size string, isFloating bool, layout str
 	if isFloating {
 		if len(parts) == 1 {
 			// If only one value is provided, use it for both width and height
-			return c.ExecuteCommand(fmt.Sprintf("[con_id=%d] resize set %s %s", id, parts[0], parts[0]))
+			return c.ExecuteCommand(fmt.Sprintf("[id=%d] resize set %s %s", id, parts[0], parts[0]))
 		}
-		return c.ExecuteCommand(fmt.Sprintf("[con_id=%d] resize set %s", id, size))
+		return c.ExecuteCommand(fmt.Sprintf("[id=%d] resize set %s", id, size))
 	}
 
 	switch layout {
@@ -46,14 +46,14 @@ func (c *Client) ResizeWindow(id int64, size string, isFloating bool, layout str
 	case "splitv":
 		// In vertical split, only set height
 		if len(parts) == 1 {
-			return c.ExecuteCommand(fmt.Sprintf("[con_id=%d] resize set height %s", id, parts[0]))
+			return c.ExecuteCommand(fmt.Sprintf("[id=%d] resize set height %s", id, parts[0]))
 		} else if len(parts) >= 2 {
-			return c.ExecuteCommand(fmt.Sprintf("[con_id=%d] resize set height %s", id, parts[1]))
+			return c.ExecuteCommand(fmt.Sprintf("[id=%d] resize set height %s", id, parts[1]))
 		}
 	case "splith", "":
 		// In horizontal split, only set width
 		if len(parts) >= 1 {
-			return c.ExecuteCommand(fmt.Sprintf("[con_id=%d] resize set width %s", id, parts[0]))
+			return c.ExecuteCommand(fmt.Sprintf("[id=%d] resize set width %s", id, parts[0]))
 		}
 	}
 

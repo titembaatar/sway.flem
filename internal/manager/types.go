@@ -18,8 +18,18 @@ type AppUpdate struct {
 	Config config.App
 }
 
-type OrderedApp struct {
-	App config.App
+// Container information
+type ContainerInfo struct {
+	ID     int64
+	Layout string
+	Apps   []AppInfo
+}
+
+// AppInfo tracks an app that has been launched and needs to be configured
+type AppInfo struct {
+	App    config.App
+	NodeID int64
+	Layout string // The layout context for this app
 }
 
 // Layout node in a workspace

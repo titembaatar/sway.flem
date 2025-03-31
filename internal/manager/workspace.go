@@ -8,6 +8,67 @@ import (
 	"github.com/titembaatar/sway.flem/internal/sway"
 )
 
+// setupWorkspaceWithContainers handles setting up a workspace that contains nested containers
+func (m *Manager) setupWorkspaceWithContainers(wsNum int, workspace config.Workspace, currentApps []sway.AppNode) error {
+	m.logVerbose("Setting up workspace %d with containers", wsNum)
+
+	// Tracking list for apps that need to be resized
+	var appsToResize []AppInfo
+
+	// STEP 1: Launch apps directly in the workspace (without resizing yet)
+	for i, app := range workspace.Apps {
+		m.logVerbose("Launching workspace app %d: %s", i, app.Name)
+
+		// Launch app
+		nodeID, err := m.LaunchApp(app)
+		if err != nil {
+			log.Printf("Warning: Failed to launch workspace app %s: %v", app.Name, err)
+			continue
+		}
+		m.delay(300)
+
+		// Set floating state immediately if needed
+		if app.Floating {
+			if err := m.SetFloatingState(nodeID, app); err != nil {
+				log.Printf("Warning: Failed to set floating state for workspace app %s: %v", app.Name, err)
+			}
+			m.delay(100)
+		}
+
+		// Add to resize list, don't resize yet
+		if app.Size != "" {
+			appsToResize = append(appsToResize, AppInfo{
+				App:    app,
+				NodeID: nodeID,
+				Layout: workspace.Layout,
+			})
+		}
+	}
+
+	// STEP 2: Set up container structure and resize apps at appropriate times
+	if workspace.Container != nil {
+		m.logVerbose("Setting up container structure in workspace %d", wsNum)
+		if err := m.SetupContainerStructure(workspace.Container, workspace.Layout, &appsToResize); err != nil {
+			return fmt.Errorf("setting up container: %w", err)
+		}
+	}
+
+	// STEP 3: Resize any remaining apps that weren't resized during container setup
+	if len(appsToResize) > 0 {
+		m.logVerbose("Resizing remaining apps (%d apps)", len(appsToResize))
+		m.resizeAppBatch(appsToResize)
+	}
+
+	// STEP 4: Handle CloseUnmatched for workspaces with containers
+	if workspace.CloseUnmatched {
+		m.logVerbose("Closing unmatched applications on workspace %d (including containers)", wsNum)
+		allApps := m.CollectAllApps(workspace)
+		m.closeUnmatchedApps(allApps, currentApps)
+	}
+
+	return nil
+}
+
 func (m *Manager) SetupWorkspace(wsNum int, workspace config.Workspace, currentApps []sway.AppNode) error {
 	m.logVerbose("Setting up workspace %d", wsNum)
 
@@ -15,11 +76,57 @@ func (m *Manager) SetupWorkspace(wsNum int, workspace config.Workspace, currentA
 		return err
 	}
 
-	updateApps, launchApps := m.categorizeApps(workspace.Apps, currentApps)
+	// If workspace has containers, use container-aware setup
+	if workspace.Container != nil {
+		m.logVerbose("Workspace %d has containers, using container-aware setup", wsNum)
+		return m.setupWorkspaceWithContainers(wsNum, workspace, currentApps)
+	}
 
-	appIDs := m.launchNewApps(launchApps)
+	// Standard non-container setup
+	var appsToResize []AppInfo
 
-	m.configureApps(appIDs, updateApps, workspace.Apps, workspace.Layout)
+	// Launch all apps first (without resizing)
+	for i, app := range workspace.Apps {
+		m.logVerbose("Launching workspace app %d: %s", i, app.Name)
+
+		// Launch app
+		nodeID, err := m.LaunchApp(app)
+		if err != nil {
+			log.Printf("Warning: Failed to launch workspace app %s: %v", app.Name, err)
+			continue
+		}
+		m.delay(300)
+
+		// Set floating state immediately
+		if app.Floating {
+			if err := m.SetFloatingState(nodeID, app); err != nil {
+				log.Printf("Warning: Failed to set floating state for workspace app %s: %v", app.Name, err)
+			}
+			m.delay(100)
+		}
+
+		// Add to resize list
+		if app.Size != "" {
+			appsToResize = append(appsToResize, AppInfo{
+				App:    app,
+				NodeID: nodeID,
+				Layout: workspace.Layout,
+			})
+		}
+
+		// Run post commands
+		if len(app.Posts) > 0 {
+			if err := m.RunPostCommands(app); err != nil {
+				log.Printf("Warning: Failed to run post commands for workspace app %s: %v", app.Name, err)
+			}
+		}
+	}
+
+	// Resize all apps at once
+	if len(appsToResize) > 0 {
+		m.logVerbose("Resizing all workspace apps (%d apps)", len(appsToResize))
+		m.resizeAppBatch(appsToResize)
+	}
 
 	if workspace.CloseUnmatched {
 		m.logVerbose("Closing unmatched applications on workspace %d", wsNum)
@@ -224,4 +331,3 @@ func (m *Manager) closeUnmatchedApps(configApps []config.App, currentApps []sway
 		}
 	}
 }
-

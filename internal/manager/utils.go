@@ -8,7 +8,7 @@ import (
 
 func (m *Manager) logVerbose(format string, args ...any) {
 	if m.Verbose {
-		log.Printf(format, args...)
+		log.Printf("[DEBUG]: "+format, args...)
 	}
 }
 

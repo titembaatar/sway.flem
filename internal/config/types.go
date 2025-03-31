@@ -14,18 +14,25 @@ type DefaultsConfig struct {
 }
 
 type Workspace struct {
-	Layout         string `yaml:"layout,omitempty"`
-	Output         string `yaml:"output,omitempty"`
-	CloseUnmatched bool   `yaml:"close_unmatched,omitempty"`
-	Apps           []App  `yaml:"apps"`
+	Layout         string     `yaml:"layout,omitempty"`
+	Output         string     `yaml:"output,omitempty"`
+	CloseUnmatched bool       `yaml:"close_unmatched,omitempty"`
+	Apps           []App      `yaml:"apps"`
+	Container      *Container `yaml:"container,omitempty"`
+}
+
+type Container struct {
+	Layout    string     `yaml:"layout,omitempty"`
+	Size      string     `yaml:"size,omitempty"`
+	Apps      []App      `yaml:"apps"`
+	Container *Container `yaml:"container,omitempty"` // Nested container
 }
 
 type App struct {
-	Name     string   `yaml:"name"`               // Name of the app (required)
-	Command  string   `yaml:"command,omitempty"`  // Command to launch the app (defaults to Name if empty)
-	Size     string   `yaml:"size,omitempty"`     // Size of the app window, e.g. "800x600" or "50ppt 70ppt"
-	Floating bool     `yaml:"floating,omitempty"` // Whether the app should be floating or tiled
-	Posts    []string `yaml:"post,omitempty"`     // Commands to run after launching the app
-	Launcher string   `yaml:"launcher,omitempty"` // Custom launcher to use (if any)
-	Delay    int64    `yaml:"delay,omitempty"`    // Delay in seconds before configuring the app
+	Name     string   `yaml:"name"`
+	Command  string   `yaml:"command,omitempty"` // Command to launch the app (defaults to Name if empty)
+	Size     string   `yaml:"size,omitempty"`
+	Floating bool     `yaml:"floating,omitempty"`
+	Posts    []string `yaml:"post,omitempty"`  // Commands to run after launching the app
+	Delay    int64    `yaml:"delay,omitempty"` // Delay in seconds before configuring the app
 }
