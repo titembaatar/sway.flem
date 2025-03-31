@@ -49,7 +49,7 @@ func checkCommand(command string) error {
 
 	// Try to run a simple command with the tool
 	cmd := "swaymsg -v"
-	if _, err := sway.RunCommandWithNoResponse(cmd); err != nil {
+	if err := sway.RunCommandWithNoResponse(cmd); err != nil {
 		log.Error("%s is not available: %v", command, err)
 		return fmt.Errorf("%s is not available: %w", command, err)
 	}
