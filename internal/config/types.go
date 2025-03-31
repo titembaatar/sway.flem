@@ -8,9 +8,8 @@ type Config struct {
 
 // Fallback settings
 type DefaultsConfig struct {
-	DefaultLayout   string `yaml:"default_layout,omitempty"`
-	DefaultOutput   string `yaml:"default_output,omitempty"`
-	DefaultFloating bool   `yaml:"default_floating,omitempty"`
+	DefaultLayout string `yaml:"default_layout,omitempty"`
+	DefaultOutput string `yaml:"default_output,omitempty"`
 }
 
 type Workspace struct {
@@ -29,10 +28,9 @@ type Container struct {
 }
 
 type App struct {
-	Name     string   `yaml:"name"`
-	Command  string   `yaml:"command,omitempty"` // Command to launch the app (defaults to Name if empty)
-	Size     string   `yaml:"size,omitempty"`
-	Floating bool     `yaml:"floating,omitempty"`
-	Posts    []string `yaml:"post,omitempty"`  // Commands to run after launching the app
-	Delay    int64    `yaml:"delay,omitempty"` // Delay in seconds before configuring the app
+	Name    string   `yaml:"name"`
+	Command string   `yaml:"command,omitempty"` // Command to launch the app (defaults to Name if empty)
+	Size    string   `yaml:"size,omitempty"`
+	Posts   []string `yaml:"post,omitempty"`  // Commands to run after launching the app
+	Delay   int64    `yaml:"delay,omitempty"` // Delay in seconds before configuring the app
 }

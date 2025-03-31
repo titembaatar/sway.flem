@@ -21,12 +21,6 @@ func ApplyDefaults(config *Config) {
 				app.Command = app.Name
 				workspace.Apps[i] = app
 			}
-
-			// default floating setting if global default is set to true
-			if !app.Floating && config.Defaults.DefaultFloating {
-				app.Floating = true
-				workspace.Apps[i] = app
-			}
 		}
 	}
 }

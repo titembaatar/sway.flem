@@ -47,7 +47,6 @@ type AppLaunchOptions struct {
 
 // Options for updating an application
 type AppUpdateOptions struct {
-	Floating bool
 	Size     string
 	Layout   string
 	PostCmds []string

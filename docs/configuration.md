@@ -18,7 +18,6 @@ focus_workspace: 1
 defaults:
   default_layout: "splith"  # Default layout for workspaces
   default_output: "DP-1"    # Default output for workspaces
-  default_floating: false   # Whether apps should be floating by default
 
 # Workspace configurations
 workspaces:
@@ -30,7 +29,6 @@ workspaces:
       - name: "app_name_1"  # app_id for Wayland or class for X11
         command: "cmd_to_launch_app"  # Optional if same as name
         size: "20ppt 100ppt"  # width height (optional)
-        floating: true  # Set window to floating mode (optional)
         posts:  # Commands to run after app launches
           - "cmd 1"
           - "cmd 2"

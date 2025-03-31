@@ -2,7 +2,6 @@ package manager
 
 import (
 	"fmt"
-	"log"
 
 	"github.com/titembaatar/sway.flem/internal/config"
 )
@@ -14,19 +13,71 @@ func (m *Manager) SetupContainerStructure(container *config.Container, parentLay
 		return nil
 	}
 
-	// STEP 1: Launch the first app in the container (container representative)
+	// Launch and configure the first app (container representative)
 	firstApp := container.Apps[0]
-	m.logVerbose("Launching first app in container (container representative): %s", firstApp.Name)
-	nodeID, err := m.LaunchApp(firstApp)
+	nodeID, err := m.launchContainerRepresentative(firstApp)
 	if err != nil {
-		return fmt.Errorf("launching container representative app: %w", err)
+		return err
+	}
+
+	// Handle container sizing
+	m.handleContainerSizing(container, firstApp, nodeID, parentLayout, appsToResize)
+
+	// Set the container layout
+	if container.Layout != "" {
+		m.logDebug("Setting container layout to: %s", container.Layout)
+		layoutCmd := m.GetLayoutCommand(container.Layout)
+		if err := m.Client.ExecuteCommand(layoutCmd); err != nil {
+			m.logWarn("Failed to set container layout: %v", err)
+		}
+		m.delay(200)
+	}
+
+	// Launch subsequent apps
+	m.launchSubsequentApps(container, appsToResize)
+
+	// Handle nested containers recursively
+	if container.Container != nil {
+		currentLayout := container.Layout
+		if currentLayout == "" {
+			currentLayout = parentLayout
+		}
+
+		if err := m.SetupContainerStructure(container.Container, currentLayout, appsToResize); err != nil {
+			m.logWarn("Issue with nested container: %v", err)
+		}
+	}
+
+	// Run post-commands for all apps in this container
+	m.runContainerPostCommands(container)
+
+	return nil
+}
+
+// launchContainerRepresentative launches the first app in a container
+func (m *Manager) launchContainerRepresentative(app config.App) (int64, error) {
+	m.logDebug("Launching container representative app: %s", app.Name)
+	nodeID, err := m.LaunchApp(app)
+	if err != nil {
+		return 0, fmt.Errorf("launching container representative app: %w", err)
 	}
 	m.delay(300)
+	return nodeID, nil
+}
 
-	// STEP 2: Add first app to resize list with container size (using parent layout context)
+// handleContainerSizing adds resize operations to the resize list
+func (m *Manager) handleContainerSizing(
+	container *config.Container,
+	firstApp config.App,
+	nodeID int64,
+	parentLayout string,
+	appsToResize *[]AppInfo,
+) {
+	// Add container-level sizing if specified
 	if container.Size != "" {
-		m.logVerbose("Adding container representative to resize list with size %s (parent layout: %s)",
+		m.logDebug("Adding container representative to resize list with size %s (parent layout: %s)",
 			container.Size, parentLayout)
+
 		// Create a temporary app with container's size for the resize list
 		containerApp := config.App{
 			Name: firstApp.Name,
@@ -49,40 +100,26 @@ func (m *Manager) SetupContainerStructure(container *config.Container, parentLay
 		})
 	}
 
-	// STEP 3: Resize all apps collected so far
-	m.logVerbose("Resizing all apps collected so far (%d apps)", len(*appsToResize))
-	m.resizeAppBatch(*appsToResize)
-
-	// Clear the list of apps to resize since we've resized them
-	*appsToResize = []AppInfo{}
-
-	// STEP 4: Set the container layout
-	if container.Layout != "" {
-		m.logVerbose("Setting container layout to: %s", container.Layout)
-		if err := m.Client.ExecuteCommand(container.Layout); err != nil {
-			log.Printf("Warning: Failed to set container layout: %v", err)
-		}
-		m.delay(200)
+	// Perform any pending resize operations
+	if len(*appsToResize) > 0 {
+		m.logDebug("Resizing %d apps collected so far", len(*appsToResize))
+		m.resizeAppBatch(*appsToResize)
+		*appsToResize = []AppInfo{} // Clear the list after resizing
 	}
+}
 
-	// STEP 5: Launch and set floating state for remaining apps in this container
+// launchSubsequentApps launches additional apps in the container
+func (m *Manager) launchSubsequentApps(container *config.Container, appsToResize *[]AppInfo) {
 	for i := 1; i < len(container.Apps); i++ {
 		app := container.Apps[i]
-		m.logVerbose("Launching subsequent app in container: %s", app.Name)
+		m.logDebug("Launching subsequent app in container: %s", app.Name)
+
 		nodeID, err := m.LaunchApp(app)
 		if err != nil {
-			log.Printf("Warning: Failed to launch app %s: %v", app.Name, err)
+			m.logWarn("Failed to launch app %s: %v", app.Name, err)
 			continue
 		}
 		m.delay(300)
-
-		// Set floating state immediately if needed
-		if app.Floating {
-			if err := m.SetFloatingState(nodeID, app); err != nil {
-				log.Printf("Warning: Failed to set floating state for %s: %v", app.Name, err)
-			}
-			m.delay(100)
-		}
 
 		// Add to resize list
 		if app.Size != "" {
@@ -93,40 +130,27 @@ func (m *Manager) SetupContainerStructure(container *config.Container, parentLay
 			})
 		}
 	}
+}
 
-	// STEP 6: Recursively handle nested container
-	if container.Container != nil {
-		currentLayout := container.Layout
-		if currentLayout == "" {
-			currentLayout = parentLayout
-		}
-
-		err := m.SetupContainerStructure(container.Container, currentLayout, appsToResize)
-		if err != nil {
-			log.Printf("Warning: Issue with nested container: %v", err)
-		}
-	}
-
-	// STEP 7: Run post-commands for all apps in this container
+// runContainerPostCommands executes post-commands for all apps in a container
+func (m *Manager) runContainerPostCommands(container *config.Container) {
 	for _, app := range container.Apps {
 		if len(app.Posts) > 0 {
 			if err := m.RunPostCommands(app); err != nil {
-				log.Printf("Warning: Failed to run post commands for %s: %v", app.Name, err)
+				m.logWarn("Failed to run post commands for %s: %v", app.Name, err)
 			}
 		}
 	}
-
-	return nil
 }
 
 // resizeAppBatch applies resize operations to a batch of apps
 func (m *Manager) resizeAppBatch(appsToResize []AppInfo) {
 	for _, appInfo := range appsToResize {
-		m.logVerbose("Resizing app %s (ID: %d) with size %s using layout context %s",
+		m.logDebug("Resizing app %s (ID: %d) with size %s using layout context %s",
 			appInfo.App.Name, appInfo.NodeID, appInfo.App.Size, appInfo.Layout)
 
 		if err := m.ResizeApp(appInfo.NodeID, appInfo.App, appInfo.Layout); err != nil {
-			log.Printf("Warning: Failed to resize app %s: %v", appInfo.App.Name, err)
+			m.logWarn("Failed to resize app %s: %v", appInfo.App.Name, err)
 		}
 		m.delay(200)
 	}

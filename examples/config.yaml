@@ -8,7 +8,6 @@ focus_workspace: 1
 defaults:
   default_layout: "splith"  # Default layout for workspaces (splith, splitv, tabbed, stacking)
   default_output: "DP-1"    # Default output for workspaces
-  default_floating: false   # Whether apps should be floating by default
 
 # Workspace configurations
 workspaces:
@@ -61,20 +60,17 @@ workspaces:
 
       - name: "mpv"
         command: "mpv"
-        floating: true  # Make this window floating
         size: "800 600"  # 800x600 pixels
 
-  # Workspace 5: Utilities with various floating windows
+  # Workspace 5: Utilities with various windows
   5:
     output: "DP-1"
     close_unmatched: true  # Close windows not defined in the config
     apps:
       - name: "pavucontrol"
-        floating: true
         size: "400 600"
 
       - name: "gnome-calculator"
-        floating: true
 
       - name: "thunar"
         command: "thunar"
