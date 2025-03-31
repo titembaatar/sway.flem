@@ -4,32 +4,72 @@ import (
 	"flag"
 	"fmt"
 	"os"
+
+	"github.com/titembaatar/sway.flem/internal/app"
+	"github.com/titembaatar/sway.flem/internal/config"
+	"github.com/titembaatar/sway.flem/internal/log"
+)
+
+const (
+	version = "0.1.0"
 )
 
 var (
-	configFile string
-	version    bool
+	configFile  string
+	showVersion bool
+	verbose     bool
+	debug       bool
+	dryRun      bool
 )
 
 func init() {
 	flag.StringVar(&configFile, "config", "", "Path to configuration file")
-	flag.BoolVar(&version, "version", false, "Show version information")
+	flag.BoolVar(&showVersion, "version", false, "Show version information")
+	flag.BoolVar(&verbose, "verbose", false, "Enable verbose logging")
+	flag.BoolVar(&debug, "debug", false, "Enable debug mode with extra logging")
+	flag.BoolVar(&dryRun, "dry-run", false, "Validate configuration without making changes")
 	flag.Parse()
 }
 
 func main() {
-	if version {
-		fmt.Println("sway.flem v0.1.0")
+	if debug {
+		log.SetLevel(log.LogLevelDebug)
+	} else if verbose {
+		log.SetLevel(log.LogLevelInfo)
+	} else {
+		log.SetLevel(log.LogLevelWarn)
+	}
+
+	if showVersion {
+		fmt.Printf("sway.flem v%s\n", version)
 		os.Exit(0)
 	}
 
 	if configFile == "" {
-		fmt.Println("Error: config file must be specified")
+		log.Error("Config file must be specified")
 		flag.Usage()
 		os.Exit(1)
 	}
 
-	fmt.Printf("Starting sway.flem with config file: %s\n", configFile)
-	// TODO: Implement configuration parsing and application launching
-	fmt.Println("Not yet implemented")
+	log.Info("Starting sway.flem v%s", version)
+
+	cfg, err := config.LoadConfig(configFile)
+	if err != nil {
+		log.Fatal("Failed to load configuration: %v", err)
+	}
+
+	for name := range cfg.Workspaces {
+		log.Debug("Found workspace configuration: %s", name)
+	}
+
+	if dryRun {
+		log.Info("Dry run completed successfully. Configuration is valid.")
+		os.Exit(0)
+	}
+
+	if err := app.Setup(cfg); err != nil {
+		log.Fatal("Failed to setup environment: %v", err)
+	}
+
+	log.Info("Sway environment has been successfully configured")
 }
