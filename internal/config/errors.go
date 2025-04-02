@@ -6,12 +6,13 @@ import (
 )
 
 var (
-	ErrNoWorkspaces      = errors.New("no workspaces defined in configuration")
-	ErrInvalidLayoutType = errors.New("invalid layout type")
-	ErrMissingLayout     = errors.New("no layout defined")
-	ErrMissingAppName    = errors.New("app name is empty")
-	ErrMissingSplit      = errors.New("container has no split defined")
-	ErrMissingSize       = errors.New("container has no size defined")
+	ErrNoWorkspaces              = errors.New("no workspaces defined in configuration")
+	ErrInvalidLayoutType         = errors.New("invalid layout type")
+	ErrMissingLayout             = errors.New("no layout defined")
+	ErrNoContainers              = errors.New("workspace has no containers defined")
+	ErrMissingSize               = errors.New("container has no size defined")
+	ErrMissingSplit              = errors.New("nested container has no split defined")
+	ErrInvalidContainerStructure = errors.New("invalid container structure: must be either an app or have nested containers")
 )
 
 type ConfigError struct {

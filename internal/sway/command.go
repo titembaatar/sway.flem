@@ -55,28 +55,6 @@ func RunCommand(command string) ([]CommandResponse, error) {
 	return responses, nil
 }
 
-// Executes a swaymsg command and doesn't parse the response
-func RunCommandWithNoResponse(command string) error {
-	log.Debug("Executing sway command (no response): %s", command)
-
-	cmd := exec.Command("swaymsg", "--", command)
-
-	var stderr bytes.Buffer
-	cmd.Stderr = &stderr
-
-	err := cmd.Run()
-	if err != nil {
-		errMsg := stderr.String()
-		log.Error("Failed to execute sway command: %v", err)
-		if errMsg != "" {
-			log.Error("Stderr: %s", errMsg)
-		}
-		return fmt.Errorf("swaymsg error: %w: %s", err, errMsg)
-	}
-
-	return nil
-}
-
 // Retrieves the list of workspaces from sway
 func GetWorkspaces() ([]string, error) {
 	log.Debug("Getting workspaces from sway")

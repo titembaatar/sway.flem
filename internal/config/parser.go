@@ -31,6 +31,8 @@ func LoadConfig(path string) (*Config, error) {
 
 	var config Config
 	decoder := yaml.NewDecoder(file)
+	decoder.KnownFields(true)
+
 	if err := decoder.Decode(&config); err != nil {
 		log.Error("Failed to parse YAML configuration: %v", err)
 		return nil, fmt.Errorf("failed to decode config: %w", err)
@@ -46,4 +48,3 @@ func LoadConfig(path string) (*Config, error) {
 	log.Info("Configuration loaded successfully")
 	return &config, nil
 }
-

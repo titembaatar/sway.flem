@@ -10,19 +10,20 @@ import (
 	"github.com/titembaatar/sway.flem/internal/log"
 )
 
+// App information for resizing operations
 type AppInfo struct {
-	Mark   string
-	Size   string
-	Layout string
+	Mark   string // Mark identifying this node
+	Size   string // Size to set
+	Layout string // Parent layout (determines resize dimension)
 }
 
 // Launches an application and marks it
-func LaunchApp(app config.App, mark string) error {
-	log.Info("Launching application: %s", app.Name)
+func LaunchApp(app config.Container, mark string) error {
+	log.Info("Launching application: %s", app.App)
 
 	cmdStr := app.Cmd
 	if cmdStr == "" {
-		cmdStr = app.Name
+		cmdStr = app.App
 	}
 
 	parts := strings.Fields(cmdStr)
@@ -44,7 +45,11 @@ func LaunchApp(app config.App, mark string) error {
 	}
 
 	// Give the application some time to launch
-	time.Sleep(300 * time.Millisecond)
+	if app.Delay != 0 {
+		time.Sleep(time.Duration(app.Delay) * time.Second)
+	} else {
+		time.Sleep(300 * time.Millisecond)
+	}
 
 	log.Debug("Applying mark to application: %s", mark)
 	if err := ApplyMark(mark); err != nil {
@@ -55,67 +60,54 @@ func LaunchApp(app config.App, mark string) error {
 	return nil
 }
 
-// Launches applications in a container and returns info for later resizing
-func LaunchApps(containerMark string, split string, apps []config.App) ([]AppInfo, error) {
-	if len(apps) == 0 {
-		return nil, nil
-	}
-
-	var appInfos []AppInfo
-
-	// For the first app, we need to set the split layout on the parent container
-	if len(apps) > 0 {
-		// Focus the parent container first
-		if err := FocusMark(containerMark); err != nil {
-			return nil, fmt.Errorf("failed to focus parent container: %w", err)
-		}
-
-		// Set the split layout for the first app
-		splitCmd := fmt.Sprintf("split %s", split)
-		if _, err := RunCommand(splitCmd); err != nil {
-			return nil, fmt.Errorf("failed to set split layout: %w", err)
-		}
-	}
-
-	// Launch each app in sequence
-	for i, app := range apps {
-		appMark := GenerateAppMark(containerMark, fmt.Sprintf("app%d", i+1))
-
-		if err := LaunchApp(app, appMark); err != nil {
-			log.Error("Failed to launch app %s: %v", app.Name, err)
-			continue // Try to launch remaining apps even if this one fails
-		}
-
-		// Store information for later resizing
-		appInfos = append(appInfos, AppInfo{
-			Mark:   appMark,
-			Size:   app.Size,
-			Layout: split,
-		})
-
-		// After launching the first app, subsequent apps need to focus the parent container
-		if i < len(apps)-1 {
-			if err := FocusMark(containerMark); err != nil {
-				log.Error("Failed to focus parent container: %v", err)
-				return appInfos, fmt.Errorf("failed to focus parent container: %w", err)
-			}
-		}
-	}
-
-	return appInfos, nil
-}
-
 // Resizes a list of applications according to their stored information
 func ResizeApps(appInfos []AppInfo) {
-	log.Info("Resizing %d applications", len(appInfos))
+	log.Info("Resizing %d nodes", len(appInfos))
 
 	for _, app := range appInfos {
 		if app.Size != "" {
-			log.Debug("Resizing app with mark '%s' to '%s'", app.Mark, app.Size)
+			log.Debug("Resizing mark '%s' to '%s' with layout '%s'", app.Mark, app.Size, app.Layout)
 			if err := ResizeMark(app.Mark, app.Size, app.Layout); err != nil {
-				log.Warn("Failed to resize app '%s': %v", app.Mark, err)
-				// Continue even if resize fails
+				log.Warn("Failed to resize '%s': %v", app.Mark, err)
+				// Continue with other resizes even if some fail
 			}
+			time.Sleep(200 * time.Millisecond)
 		}
 	}
+}
+
+// Resizes a node (app or container) with the given mark
+func ResizeMark(mark string, size string, layout string) error {
+	var dimension string
+
+	// Determine resize dimension based on layout
+	switch layout {
+	case "splith", "tabbed", "h", "t", "horizontal":
+		dimension = "width"
+	case "splitv", "stacking", "v", "s", "vertical":
+		dimension = "height"
+	default:
+		// Default to width for unknown layouts
+		dimension = "width"
+		log.Warn("Unknown layout for resizing: %s, defaulting to width", layout)
+	}
+
+	// Use criteria to focus and resize
+	focusCmd := fmt.Sprintf("[con_mark=\"%s\"] focus", mark)
+	resizeCmd := fmt.Sprintf("resize set %s %s", dimension, size)
+	_, errFocus := RunCommand(focusCmd)
+	if errFocus != nil {
+		return fmt.Errorf("failed to focus node: %w", errFocus)
+	}
+
+	time.Sleep(100 * time.Millisecond)
+
+	_, errResize := RunCommand(resizeCmd)
+	if errResize != nil {
+		return fmt.Errorf("failed to resize node: %w", errResize)
+	}
+
+	time.Sleep(100 * time.Millisecond)
+
+	return nil
 }

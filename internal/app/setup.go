@@ -2,6 +2,7 @@ package app
 
 import (
 	"fmt"
+	"os/exec"
 	"time"
 
 	"github.com/titembaatar/sway.flem/internal/config"
@@ -47,13 +48,18 @@ func checkDependencies() error {
 func checkCommand(command string) error {
 	log.Debug("Checking if %s is available", command)
 
-	// Try to run a simple command with the tool
-	cmd := "swaymsg -v"
-	if err := sway.RunCommandWithNoResponse(cmd); err != nil {
+	// Try to run the command with -v flag to check version
+	cmd := exec.Command(command, "-v")
+	output, err := cmd.CombinedOutput()
+
+	if err != nil {
 		log.Error("%s is not available: %v", command, err)
+		if len(output) > 0 {
+			log.Error("Command output: %s", string(output))
+		}
 		return fmt.Errorf("%s is not available: %w", command, err)
 	}
 
-	log.Debug("%s is available", command)
+	log.Debug("%s is available, version: %s", command, string(output))
 	return nil
 }

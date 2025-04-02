@@ -14,27 +14,20 @@ const (
 	MarkPrefix = "sway_flem"
 )
 
-type MarkType string
+// Generate a mark for an app
+func generateAppMark(workspaceName string, depth, containerID, appIndex int) string {
+	if depth == 0 {
+		// Top-level app
+		return fmt.Sprintf("ws_%s_app_%d", workspaceName, appIndex+1)
+	}
 
-const (
-	MarkTypeWorkspace MarkType = "ws"
-	MarkTypeContainer MarkType = "con"
-	MarkTypeApp       MarkType = "app"
-)
-
-// Generates a mark for a workspace
-func GenerateWorkspaceMark(workspaceName string) string {
-	return fmt.Sprintf("%s_%s_%s", MarkPrefix, string(MarkTypeWorkspace), workspaceName)
+	// App in a container
+	return fmt.Sprintf("ws_%s_con_%d_app_%d", workspaceName, containerID, appIndex+1)
 }
 
-// Generates a mark for a container
-func GenerateContainerMark(workspaceMark string, containerID string) string {
-	return fmt.Sprintf("%s_%s_%s", workspaceMark, string(MarkTypeContainer), containerID)
-}
-
-// Generates a mark for an application
-func GenerateAppMark(containerMark string, appID string) string {
-	return fmt.Sprintf("%s_%s_%s", containerMark, string(MarkTypeApp), appID)
+// Generate a mark for a container
+func generateContainerMark(workspaceName string, containerID int) string {
+	return fmt.Sprintf("ws_%s_con_%d", workspaceName, containerID)
 }
 
 // Applies a mark to the currently focused container
@@ -45,16 +38,8 @@ func ApplyMark(mark string) error {
 	return err
 }
 
-// Focuses the container with the specified mark
-func FocusMark(mark string) error {
-	log.Debug("Focusing container with mark '%s'", mark)
-	command := fmt.Sprintf("[con_mark=%s] focus", mark)
-	_, err := RunCommand(command)
-	return err
-}
-
-// Retrieves all nodes with marks
-func GetMarkedNodes() (map[string]bool, error) {
+// Retrieves all nodes with marks (for debugging purposes)
+func GetMarkedNodes() ([]string, error) {
 	log.Debug("Getting all marked nodes")
 
 	cmd := exec.Command("swaymsg", "-t", "get_marks", "-r")
@@ -79,47 +64,14 @@ func GetMarkedNodes() (map[string]bool, error) {
 		return nil, fmt.Errorf("failed to parse marks response: %w", err)
 	}
 
-	// Create a map for quick lookups
-	marksMap := make(map[string]bool)
+	// Filter for our marks
+	var ourMarks []string
 	for _, mark := range marks {
-		if strings.HasPrefix(mark, MarkPrefix) {
-			marksMap[mark] = true
+		if strings.HasPrefix(mark, "ws_") {
+			ourMarks = append(ourMarks, mark)
 		}
 	}
 
-	log.Debug("Found %d marks with our prefix", len(marksMap))
-	return marksMap, nil
-}
-
-// Checks if a mark exists
-func IsMarkExist(mark string) (bool, error) {
-	marks, err := GetMarkedNodes()
-	if err != nil {
-		return false, err
-	}
-	return marks[mark], nil
-}
-
-// Resizes the container with the specified mark based on layout
-func ResizeMark(mark string, size string, layout string) error {
-	log.Debug("Resizing container with mark '%s' to '%s' with layout '%s'", mark, size, layout)
-
-	if err := FocusMark(mark); err != nil {
-		return err
-	}
-
-	var dimension string
-	if layout == "splith" || layout == "tabbed" {
-		dimension = "width"
-	} else if layout == "splitv" || layout == "stacking" {
-		dimension = "height"
-	} else {
-		// Default to width for unknown layouts
-		dimension = "width"
-		log.Warn("Unknown layout for resizing: %s, defaulting to width", layout)
-	}
-
-	command := fmt.Sprintf("resize set %s %s", dimension, size)
-	_, err := RunCommand(command)
-	return err
+	log.Debug("Found %d marks for our applications", len(ourMarks))
+	return ourMarks, nil
 }

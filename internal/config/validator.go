@@ -1,6 +1,8 @@
 package config
 
 import (
+	"fmt"
+
 	"github.com/titembaatar/sway.flem/internal/log"
 )
 
@@ -60,14 +62,13 @@ func validateWorkspace(name string, workspace Workspace) error {
 		return NewConfigError(ErrMissingLayout, name, "", -1)
 	}
 
-	for i, app := range workspace.Apps {
-		if app.Name == "" {
-			return NewConfigError(ErrMissingAppName, name, "app", i)
-		}
+	if len(workspace.Containers) == 0 {
+		return NewConfigError(ErrNoContainers, name, "", -1)
 	}
 
-	if workspace.Container != nil {
-		if err := validateContainer(name, workspace.Container, "container"); err != nil {
+	// Validate each container in the workspace
+	for i, container := range workspace.Containers {
+		if err := validateContainer(name, container, fmt.Sprintf("container[%d]", i)); err != nil {
 			return err
 		}
 	}
@@ -75,31 +76,45 @@ func validateWorkspace(name string, workspace Workspace) error {
 	return nil
 }
 
-func validateContainer(workspaceName string, container *Container, context string) error {
-	if container.Split == "" {
-		return NewConfigError(ErrMissingSplit, workspaceName, context, -1)
+func validateContainer(workspaceName string, container Container, context string) error {
+	// Check if this is an app container or a nested container
+	isApp := container.App != ""
+	isNestedContainer := len(container.Containers) > 0
+
+	// A container must be either an app or have nested containers, not both
+	if isApp && isNestedContainer {
+		return NewConfigError(ErrInvalidContainerStructure, workspaceName, context, -1)
 	}
 
-	normalizedSplit, err := NormalizeLayoutType(container.Split)
-	if err != nil {
-		return NewConfigError(err, workspaceName, context, -1)
+	// A container must be either an app or have nested containers, not neither
+	if !isApp && !isNestedContainer {
+		return NewConfigError(ErrInvalidContainerStructure, workspaceName, context, -1)
 	}
-	container.Split = normalizedSplit
 
+	// Size is required for all containers
 	if container.Size == "" {
 		return NewConfigError(ErrMissingSize, workspaceName, context, -1)
 	}
 
-	for i, app := range container.Apps {
-		if app.Name == "" {
-			return NewConfigError(ErrMissingAppName, workspaceName, context+".app", i)
+	// If this is a nested container, validate split and nested containers
+	if isNestedContainer {
+		if container.Split == "" {
+			return NewConfigError(ErrMissingSplit, workspaceName, context, -1)
 		}
-	}
 
-	if container.Container != nil {
-		nestedContext := context + ".container"
-		if err := validateContainer(workspaceName, container.Container, nestedContext); err != nil {
-			return err
+		// Normalize split
+		normalizedSplit, err := NormalizeLayoutType(container.Split)
+		if err != nil {
+			return NewConfigError(err, workspaceName, fmt.Sprintf("%s.split", context), -1)
+		}
+		container.Split = normalizedSplit
+
+		// Validate nested containers
+		for i, nestedContainer := range container.Containers {
+			nestedContext := fmt.Sprintf("%s.containers[%d]", context, i)
+			if err := validateContainer(workspaceName, nestedContainer, nestedContext); err != nil {
+				return err
+			}
 		}
 	}
 
