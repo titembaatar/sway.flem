@@ -10,11 +10,10 @@ import (
 	"github.com/titembaatar/sway.flem/internal/log"
 )
 
-// App information for resizing operations
 type AppInfo struct {
-	Mark   string // Mark identifying this node
-	Size   string // Size to set
-	Layout string // Parent layout (determines resize dimension)
+	Mark   string
+	Size   string
+	Layout string
 }
 
 // Launches an application and marks it
@@ -57,6 +56,57 @@ func LaunchApp(app config.Container, mark string) error {
 		return fmt.Errorf("failed to apply mark to application: %w", err)
 	}
 
+	// Execute post-launch commands if any
+	if len(app.Post) > 0 {
+		if err := RunPostCmd(app.Post); err != nil {
+			log.Warn("Some post-launch commands failed: %v", err)
+			// Continue execution even if post commands fail
+		}
+	}
+
+	return nil
+}
+
+// Executes post-launch commands
+func RunPostCmd(commands []string) error {
+	if len(commands) == 0 {
+		return nil
+	}
+
+	log.Info("Executing %d post-launch commands", len(commands))
+	var errors []string
+
+	for i, cmdStr := range commands {
+		log.Debug("Executing post-launch command %d: %s", i+1, cmdStr)
+
+		parts := strings.Fields(cmdStr)
+		if len(parts) == 0 {
+			errors = append(errors, fmt.Sprintf("command %d: empty command", i+1))
+			continue
+		}
+
+		var cmd *exec.Cmd
+		if len(parts) == 1 {
+			cmd = exec.Command(parts[0])
+		} else {
+			cmd = exec.Command(parts[0], parts[1:]...)
+		}
+
+		err := cmd.Start()
+		if err != nil {
+			log.Error("Failed to execute post-launch command %d: %v", i+1, err)
+			errors = append(errors, fmt.Sprintf("command %d: %v", i+1, err))
+			continue
+		}
+
+		time.Sleep(200 * time.Millisecond)
+	}
+
+	if len(errors) > 0 {
+		return fmt.Errorf("failed to execute some post-launch commands: %s", strings.Join(errors, "; "))
+	}
+
+	log.Info("All post-launch commands executed successfully")
 	return nil
 }
 
@@ -65,14 +115,17 @@ func ResizeApps(appInfos []AppInfo) {
 	log.Info("Resizing %d nodes", len(appInfos))
 
 	for _, app := range appInfos {
-		if app.Size != "" {
-			log.Debug("Resizing mark '%s' to '%s' with layout '%s'", app.Mark, app.Size, app.Layout)
-			if err := ResizeMark(app.Mark, app.Size, app.Layout); err != nil {
-				log.Warn("Failed to resize '%s': %v", app.Mark, err)
-				// Continue with other resizes even if some fail
-			}
-			time.Sleep(200 * time.Millisecond)
+		if app.Size == "" {
+			log.Debug("Skipping resize for mark '%s' (no size specified)", app.Mark)
+			continue
 		}
+
+		log.Debug("Resizing mark '%s' to '%s' with layout '%s'", app.Mark, app.Size, app.Layout)
+		if err := ResizeMark(app.Mark, app.Size, app.Layout); err != nil {
+			log.Warn("Failed to resize '%s': %v", app.Mark, err)
+		}
+
+		time.Sleep(200 * time.Millisecond)
 	}
 }
 

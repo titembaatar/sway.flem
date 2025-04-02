@@ -10,7 +10,6 @@ var (
 	ErrInvalidLayoutType         = errors.New("invalid layout type")
 	ErrMissingLayout             = errors.New("no layout defined")
 	ErrNoContainers              = errors.New("workspace has no containers defined")
-	ErrMissingSize               = errors.New("container has no size defined")
 	ErrMissingSplit              = errors.New("nested container has no split defined")
 	ErrInvalidContainerStructure = errors.New("invalid container structure: must be either an app or have nested containers")
 )

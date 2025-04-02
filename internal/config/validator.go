@@ -91,11 +91,6 @@ func validateContainer(workspaceName string, container Container, context string
 		return NewConfigError(ErrInvalidContainerStructure, workspaceName, context, -1)
 	}
 
-	// Size is required for all containers
-	if container.Size == "" {
-		return NewConfigError(ErrMissingSize, workspaceName, context, -1)
-	}
-
 	// If this is a nested container, validate split and nested containers
 	if isNestedContainer {
 		if container.Split == "" {

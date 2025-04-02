@@ -76,6 +76,7 @@ func processContainers(workspaceName, parentLayout string, containers []config.C
 				Cmd:   container.Cmd,
 				Size:  container.Size,
 				Delay: container.Delay,
+				Post:  container.Post,
 			}
 
 			if err := LaunchApp(app, appMark); err != nil {
@@ -83,12 +84,13 @@ func processContainers(workspaceName, parentLayout string, containers []config.C
 				continue
 			}
 
-			// Add resize info
-			resizeInfo = append(resizeInfo, AppInfo{
-				Mark:   appMark,
-				Size:   container.Size,
-				Layout: parentLayout,
-			})
+			if container.Size != "" {
+				resizeInfo = append(resizeInfo, AppInfo{
+					Mark:   appMark,
+					Size:   container.Size,
+					Layout: parentLayout,
+				})
+			}
 		} else {
 			// We need at least one app in the container to create it
 			if len(container.Containers) == 0 {
@@ -107,9 +109,11 @@ func processContainers(workspaceName, parentLayout string, containers []config.C
 
 				// Launch the first app
 				app := config.Container{
-					App:  firstChild.App,
-					Cmd:  firstChild.Cmd,
-					Size: firstChild.Size,
+					App:   firstChild.App,
+					Cmd:   firstChild.Cmd,
+					Size:  firstChild.Size,
+					Delay: firstChild.Delay,
+					Post:  firstChild.Post,
 				}
 
 				if err := LaunchApp(app, firstAppMark); err != nil {
@@ -129,19 +133,21 @@ func processContainers(workspaceName, parentLayout string, containers []config.C
 					// Continue anyway as this might be expected
 				}
 
-				// Add container resize info (relative to parent)
-				resizeInfo = append(resizeInfo, AppInfo{
-					Mark:   containerMark,
-					Size:   container.Size,
-					Layout: parentLayout,
-				})
+				if container.Size != "" {
+					resizeInfo = append(resizeInfo, AppInfo{
+						Mark:   containerMark,
+						Size:   container.Size,
+						Layout: parentLayout,
+					})
+				}
 
-				// Add app resize info (within its container)
-				resizeInfo = append(resizeInfo, AppInfo{
-					Mark:   firstAppMark,
-					Size:   firstChild.Size,
-					Layout: container.Split,
-				})
+				if firstChild.Size != "" {
+					resizeInfo = append(resizeInfo, AppInfo{
+						Mark:   firstAppMark,
+						Size:   firstChild.Size,
+						Layout: container.Split,
+					})
+				}
 
 				// Process remaining children in this container
 				if len(container.Containers) > 1 {

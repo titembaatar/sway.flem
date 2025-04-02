@@ -10,10 +10,11 @@ type Workspace struct {
 }
 
 type Container struct {
-	App        string      `yaml:"app,omitempty"`
-	Cmd        string      `yaml:"cmd,omitempty"`
+	App        string      `yaml:"app"`
+	Cmd        string      `yaml:"cmd"`
 	Size       string      `yaml:"size"`
 	Delay      int64       `yaml:"delay"`
-	Split      string      `yaml:"split,omitempty"`
-	Containers []Container `yaml:"containers,omitempty"`
+	Split      string      `yaml:"split"`
+	Containers []Container `yaml:"containers"`
+	Post       []string    `yaml:"post"`
 }
