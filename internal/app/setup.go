@@ -28,6 +28,16 @@ func Setup(cfg *config.Config) error {
 	elapsed := time.Since(startTime)
 	log.Info("Environment setup completed in %.2f seconds", elapsed.Seconds())
 
+	if len(cfg.Focus) > 0 {
+		log.Info("Focusing on specified workspaces")
+		for _, focus := range cfg.Focus {
+			if err := sway.SwitchToWorkspace(focus); err != nil {
+				log.Warn("Failed to focus on some workspaces: %v", err)
+				// Continue even if focusing fails
+			}
+		}
+	}
+
 	return nil
 }
 

@@ -2,6 +2,7 @@ package config
 
 type Config struct {
 	Workspaces map[string]Workspace `yaml:"workspaces"`
+	Focus      []string             `yaml:"focus"`
 }
 
 type Workspace struct {
