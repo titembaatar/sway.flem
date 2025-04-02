@@ -10,10 +10,10 @@ This document provides various example configurations for common use cases.
 workspaces:
   "1":
     layout: "h"
-    apps:
-      - name: "firefox"
+    containers:
+      - app: "app1"
         size: "70ppt"
-      - name: "terminal"
+      - app: "app2"
         size: "30ppt"
 ```
 
@@ -23,10 +23,10 @@ workspaces:
 workspaces:
   "1":
     layout: "v"
-    apps:
-      - name: "firefox"
+    containers:
+      - app: "app1"
         size: "70ppt"
-      - name: "terminal"
+      - app: "app2"
         size: "30ppt"
 ```
 
@@ -36,12 +36,12 @@ workspaces:
 workspaces:
   "1":
     layout: "tabbed"
-    apps:
-      - name: "firefox"
+    containers:
+      - app: "app1"
         size: "33ppt"
-      - name: "chromium"
+      - app: "app2"
         size: "33ppt"
-      - name: "brave"
+      - app: "app3"
         size: "34ppt"
 ```
 
@@ -51,12 +51,12 @@ workspaces:
 workspaces:
   "1":
     layout: "stacking"
-    apps:
-      - name: "firefox"
+    containers:
+      - app: "app1"
         size: "33ppt"
-      - name: "terminal"
+      - app: "app2"
         size: "33ppt"
-      - name: "code"
+      - app: "app3"
         size: "34ppt"
 ```
 
@@ -70,18 +70,17 @@ A development environment with a code editor, terminal, and browser:
 workspaces:
   "dev":
     layout: "splith"
-    apps:
-      - name: "code"
+    containers:
+      - app: "editor"
         size: "60ppt"
-    container:
-      split: "splitv"
-      size: "40ppt"
-      apps:
-        - name: "terminal"
-          cmd: "alacritty"
-          size: "50ppt"
-        - name: "firefox"
-          size: "50ppt"
+      - split: "splitv"
+        size: "40ppt"
+        containers:
+          - app: "terminal"
+            cmd: "custom-terminal"
+            size: "50ppt"
+          - app: "browser"
+            size: "50ppt"
 ```
 
 ### Communication Workspace
@@ -92,45 +91,59 @@ A workspace for chat applications:
 workspaces:
   "comms":
     layout: "splith"
-    apps:
-      - name: "slack"
+    containers:
+      - app: "chat1"
         size: "33ppt"
-      - name: "discord"
+      - app: "chat2"
         size: "33ppt"
-      - name: "telegram"
-        cmd: "telegram-desktop"
+      - app: "chat3"
+        cmd: "custom-chat-app"
         size: "34ppt"
 ```
 
 ### Multi-Monitor Setup
 
-Using names for workspaces to help with organization:
+Using names for workspaces to help with organization, and focusing specific workspaces on different monitors:
 
 ```yaml
+# Focus workspaces on different monitors at the end
+focus:
+  - "2:web"    # Focus this workspace on the second monitor
+  - "1:code"   # Focus this workspace on the first monitor
+
 workspaces:
   "1:code":
     layout: "splith"
-    apps:
-      - name: "code"
+    containers:
+      - app: "editor"
         size: "70ppt"
-      - name: "terminal"
+      - app: "terminal"
         size: "30ppt"
 
   "2:web":
     layout: "tabbed"
-    apps:
-      - name: "firefox"
+    containers:
+      - app: "browser1"
         size: "100ppt"
-      - name: "chromium"
+      - app: "browser2"
         size: "100ppt"
 
   "3:comms":
     layout: "splitv"
-    apps:
-      - name: "slack"
+    containers:
+      - app: "chat1"
         size: "50ppt"
-      - name: "discord"
+      - app: "chat2"
         size: "50ppt"
+```
+
+This example assumes you've already configured your Sway to assign workspaces to specific outputs, like:
+
+```
+# In your Sway config (~/.config/sway/config)
+workspace "1:code" output DP-1
+workspace "2:web" output DP-2
+workspace "3:comms" output DP-1
 ```
 
 ### Complex Nested Layout
@@ -141,44 +154,41 @@ A complex layout with multiple nested containers:
 workspaces:
   "2":
     layout: "splith"
-    apps:
-      - name: "app1"
+    containers:
+      - app: "app1"
         size: "15ppt"
-      - name: "app2"
+      - app: "app2"
         size: "15ppt"
-    container:
-      split: "splitv"
-      size: "70ppt"
-      apps:
-        - name: "app3"
-          size: "15ppt"
-        - name: "app4"
-          size: "15ppt"
-      container:
-        split: "splith"
+      - split: "splitv"
         size: "70ppt"
-        apps:
-          - name: "app5"
-            size: "30ppt"
-          - name: "app6"
+        containers:
+          - app: "app3"
+            size: "15ppt"
+          - app: "app4"
+            size: "15ppt"
+          - split: "splith"
             size: "70ppt"
+            containers:
+              - app: "app5"
+                size: "30ppt"
+              - app: "app6"
+                size: "70ppt"
 ```
 
 Visual representation of this layout:
 
 ```
-+-------------------------------+
-|        |                      |
-| app1   |         app3         |
-|        |                      |
-+--------+----------------------+
-|        |                      |
-| app2   |         app4         |
-|        |                      |
-+--------+----------+-----------+
-|        |   app5   |   app6    |
-|        |          |           |
-+--------+----------+-----------+
+┌────┬────┬────────────────────────┐
+│    │    │          app3          │
+│    │    ├────────────────────────┤
+│    │    │          app4          │
+│    │    ├────────┬───────────────┤
+│app1│app2│        │               │
+│    │    │        │               │
+│    │    │  app5  │     app6      │
+│    │    │        │               │
+│    │    │        │               │
+└────┴────┴────────┴───────────────┘
 ```
 
 ### Media Workspace
@@ -189,33 +199,37 @@ A workspace for media consumption:
 workspaces:
   "media":
     layout: "splitv"
-    apps:
-      - name: "spotify"
+    containers:
+      - app: "music-player"
         size: "20ppt"
-    container:
-      split: "splith"
-      size: "80ppt"
-      apps:
-        - name: "vlc"
-          size: "70ppt"
-        - name: "terminal"
-          cmd: "alacritty -e ncmpcpp"
-          size: "30ppt"
+      - split: "splith"
+        size: "80ppt"
+        containers:
+          - app: "video-player"
+            size: "70ppt"
+          - app: "media-control"
+            cmd: "terminal -e media-controller"
+            size: "30ppt"
 ```
 
-## Custom Application Commands
+## Custom Application Commands and Post Actions
 
-Using custom commands to launch applications with specific parameters:
+Using custom commands to launch applications with specific parameters and post-launch actions:
 
 ```yaml
 workspaces:
   "custom":
     layout: "splith"
-    apps:
-      - name: "firefox"
-        cmd: "firefox --private-window"
+    containers:
+      - app: "browser"
+        cmd: "browser --private-window"
         size: "50ppt"
-      - name: "terminal"
-        cmd: "alacritty --working-directory ~/projects"
+        post:
+          - "browser --new-tab resource1"
+          - "browser --new-tab resource2"
+      - app: "terminal"
+        cmd: "terminal --working-directory ~/projects"
         size: "50ppt"
+        post:
+          - "terminal -e 'echo Welcome to your workspace'"
 ```

@@ -10,9 +10,9 @@ sway.flem helps you instantly set up your perfect working environment in Sway by
 
 ## Features
 
-- Instantly launch multiple applications in the right places
-- Configure complex nested container layouts
-- Precise control over window sizes and positions
+- Launch multiple applications in the right places
+- Configure nested container layouts
+- Control over window sizes and positions (within Sway limitation)
 - Support for all Sway layout types (horizontal, vertical, tabbed, stacking)
 - Easy to understand configuration format
 
@@ -20,22 +20,22 @@ sway.flem helps you instantly set up your perfect working environment in Sway by
 
 ```bash
 # Install
-go install github.com/titembaatar/sway.flem/cmd/sway.flem@latest
+go install github.com/titembaatar/sway.flem/cmd/flem@latest
 
 # Create a basic configuration
-cat > ~/.config/sway.flem.yaml << EOF
+cat > ~/.config/sway/config.yml << EOF
 workspaces:
   "1":
     layout: "h"
-    apps:
-      - name: "firefox"
+    containers:
+      - app: "app1"
         size: "60ppt"
-      - name: "terminal"
+      - app: "app2"
         size: "40ppt"
 EOF
 
 # Launch your workspace setup
-sway.flem -config ~/.config/sway.flem.yaml
+flem sway -config ~/.config/sway/config.yml
 ```
 
 ## Installation
@@ -51,13 +51,13 @@ cd sway.flem
 make build
 
 # (Optional) Install to $GOPATH/bin
-go install ./cmd/sway.flem
+go install ./cmd/flem
 ```
 
 ## Basic Usage
 
 ```
-sway.flem -config <config-file>
+flem sway -config <config-file>
 ```
 
 ### Options
@@ -95,8 +95,4 @@ See the [documentation](docs/README.md) for more advanced configuration examples
 
 ## Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-## License
-
-MIT License - see LICENSE file for details
+Contributions are welcome! Feel free to submit a Pull Request.

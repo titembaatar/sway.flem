@@ -40,17 +40,17 @@ cd sway.flem
 make build
 
 # The binary will be created in the bin directory
-./bin/sway.flem -config example.yaml
+./bin/flem -config example.yaml
 ```
 
 ### Install using Go
 
 ```bash
 # Install directly using go install
-go install github.com/titembaatar/sway.flem/cmd/sway.flem@latest
+go install github.com/titembaatar/sway.flem/cmd/flem@latest
 
 # Run
-sway.flem -config <path-to-config.yaml>
+flem sway -config <path-to-config.yaml>
 ```
 
 ## Next Steps

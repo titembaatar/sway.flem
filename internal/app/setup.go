@@ -11,7 +11,7 @@ import (
 )
 
 // Setup initializes and configures the Sway environment based on the configuration
-func Setup(cfg *config.Config) error {
+func Setup(config *config.Config) error {
 	log.Info("Starting environment setup")
 
 	// Check if swaymsg is available
@@ -21,20 +21,18 @@ func Setup(cfg *config.Config) error {
 
 	// Initialize the environment
 	startTime := time.Now()
-	if err := sway.SetupEnvironment(cfg); err != nil {
+	if err := sway.SetupEnvironment(config); err != nil {
 		return fmt.Errorf("failed to setup environment: %w", err)
 	}
 
 	elapsed := time.Since(startTime)
 	log.Info("Environment setup completed in %.2f seconds", elapsed.Seconds())
 
-	if len(cfg.Focus) > 0 {
+	if len(config.Focus) > 0 {
 		log.Info("Focusing on specified workspaces")
-		for _, focus := range cfg.Focus {
-			if err := sway.SwitchToWorkspace(focus); err != nil {
-				log.Warn("Failed to focus on some workspaces: %v", err)
-				// Continue even if focusing fails
-			}
+		if err := sway.FocusWorkspaces(config.Focus); err != nil {
+			log.Warn("Failed to focus on some workspaces: %v", err)
+			// Continue even if focusing fails
 		}
 	}
 

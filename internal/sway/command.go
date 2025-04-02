@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os/exec"
 	"strings"
+	"time"
 
 	"github.com/titembaatar/sway.flem/internal/log"
 )
@@ -111,4 +112,27 @@ func CreateWorkspace(name string, layout string) error {
 	command := fmt.Sprintf("layout %s", layout)
 	_, err := RunCommand(command)
 	return err
+}
+
+// Switches focus to each of the specified workspaces in order.
+func FocusWorkspaces(workspaces []string) error {
+	log.Info("Focusing on %d workspaces", len(workspaces))
+	var errors []string
+
+	for i, workspace := range workspaces {
+		log.Debug("Focusing on workspace: %s", workspace)
+		if err := SwitchToWorkspace(workspace); err != nil {
+			log.Error("Failed to focus on workspace %s: %v", workspace, err)
+			errors = append(errors, fmt.Sprintf("workspace %s: %v", workspace, err))
+		} else {
+			log.Info("Successfully focused on workspace %s (%d of %d)", workspace, i+1, len(workspaces))
+			time.Sleep(100 * time.Millisecond)
+		}
+	}
+
+	if len(errors) > 0 {
+		return fmt.Errorf("failed to focus on some workspaces: %s", strings.Join(errors, "; "))
+	}
+
+	return nil
 }

@@ -5,7 +5,7 @@ sway.flem provides several command line options to control its behavior.
 ## Basic Usage
 
 ```
-sway.flem -config <config-file>
+flem sway -config <config-file>
 ```
 
 ## Available Options
@@ -26,7 +26,7 @@ Specifies the path to the YAML configuration file that defines your workspace la
 
 Example:
 ```bash
-sway.flem -config ~/.config/sway.flem.yaml
+flem sway -config ~/.config/sway/config.yml
 ```
 
 ### `-version`
@@ -35,8 +35,8 @@ Displays the current version of sway.flem and exits.
 
 Example:
 ```bash
-sway.flem -version
-# Output: sway.flem v0.1.0
+flem sway -version
+# Output: flem sway v0.1.0
 ```
 
 ### `-verbose`
@@ -45,7 +45,7 @@ Increases the logging level to include informational messages. This is useful fo
 
 Example:
 ```bash
-sway.flem -config ~/.config/sway.flem.yaml -verbose
+flem sway -config ~/.config/sway/config.yml -verbose
 ```
 
 ### `-debug`
@@ -54,7 +54,7 @@ Enables debug mode, which provides detailed logging about all operations. This i
 
 Example:
 ```bash
-sway.flem -config ~/.config/sway.flem.yaml -debug
+flem sway -config ~/.config/sway/config.yml -debug
 ```
 
 ### `-dry-run`
@@ -63,7 +63,7 @@ Performs a validation of the configuration file without actually making any chan
 
 Example:
 ```bash
-sway.flem -config ~/.config/sway.flem.yaml -dry-run
+flem sway -config ~/.config/sway/config.yml -dry-run
 ```
 
 ## Log Levels
@@ -83,7 +83,7 @@ You can add sway.flem to your Sway config to automatically set up your workspace
 
 ```
 # ~/.config/sway/config
-exec sway.flem -config ~/.config/sway.flem.yaml
+exec flem sway -config ~/.config/sway/config.yml
 ```
 
 ### Running on Demand
@@ -92,7 +92,32 @@ You can also create a keybinding in your Sway config to run sway.flem on demand:
 
 ```
 # ~/.config/sway/config
-bindsym $mod+Shift+r exec sway.flem -config ~/.config/sway.flem.yaml
+bindsym $mod+Shift+r exec flem sway -config ~/.config/sway/config.yml
 ```
 
 This would allow you to reset your workspace layout by pressing the defined key combination.
+
+### Using with Multiple Monitors
+
+For multi-monitor setups, you can use the `focus` setting in your configuration to
+ensure the right workspaces are focused on each monitor when sway.flem completes:
+
+```yaml
+# In your config.yml file
+focus:
+  - "6"  # Focus workspace 6 on one monitor
+  - "1"  # Focus workspace 1 on another monitor
+
+workspaces:
+  # Your workspace configurations...
+```
+
+This works well if you've already assigned workspaces to specific monitors in your Sway config:
+
+```
+# In your Sway config (~/.config/sway/config)
+workspace 1 output DP-1
+workspace 2 output DP-1
+workspace 6 output DP-2
+workspace 7 output DP-2
+```

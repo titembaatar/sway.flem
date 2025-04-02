@@ -32,6 +32,27 @@ func init() {
 }
 
 func main() {
+	// Check if we have a command ("sway")
+	args := flag.Args()
+	if len(args) == 0 {
+		log.Error("Command required (e.g., 'flem sway')")
+		fmt.Println("Usage: flem [options] <command>")
+		fmt.Println("Commands:")
+		fmt.Println("  sway    Configure Sway workspaces")
+		flag.Usage()
+		os.Exit(1)
+	}
+
+	command := args[0]
+	if command != "sway" {
+		log.Error("Unknown command: %s", command)
+		fmt.Println("Usage: flem [options] <command>")
+		fmt.Println("Commands:")
+		fmt.Println("  sway    Configure Sway workspaces")
+		flag.Usage()
+		os.Exit(1)
+	}
+
 	if debug {
 		log.SetLevel(log.LogLevelDebug)
 	} else if verbose {
@@ -41,7 +62,7 @@ func main() {
 	}
 
 	if showVersion {
-		fmt.Printf("sway.flem v%s\n", version)
+		fmt.Printf("flem v%s\n", version)
 		os.Exit(0)
 	}
 
@@ -51,7 +72,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	log.Info("Starting sway.flem v%s", version)
+	log.Info("Starting flem sway v%s", version)
 
 	cfg, err := config.LoadConfig(configFile)
 	if err != nil {

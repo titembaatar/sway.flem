@@ -1,6 +1,6 @@
 .PHONY: build clean test test-coverage test-verbose run fmt lint help
 
-BINARY_NAME=sway.flem
+BINARY_NAME=flem
 BUILD_DIR=bin
 COVERAGE_DIR=coverage
 
@@ -17,7 +17,7 @@ help:
 
 build:
 	mkdir -p $(BUILD_DIR)
-	go build -o $(BUILD_DIR)/$(BINARY_NAME) ./cmd/sway.flem
+	go build -o $(BUILD_DIR)/$(BINARY_NAME) ./cmd/flem
 
 clean:
 	rm -rf $(BUILD_DIR)
@@ -44,4 +44,4 @@ lint:
 	go vet ./...
 
 run: build
-	./$(BUILD_DIR)/$(BINARY_NAME)
+	./$(BUILD_DIR)/$(BINARY_NAME) sway
