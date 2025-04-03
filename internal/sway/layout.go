@@ -16,7 +16,7 @@ func SetupEnvironment(cfg *config.Config) error {
 
 		if err := SetupWorkspace(name, workspace); err != nil {
 			log.Error("Failed to set up workspace %s: %v", name, err)
-
+			// Continue with other workspaces even if one fails
 			continue
 		}
 	}
@@ -102,7 +102,7 @@ func processAppContainer(
 	containerID int,
 	index int,
 ) (AppInfo, error) {
-	appMark := generateAppMark(workspaceName, depth, containerID, index)
+	mark := NewAppMark(workspaceName, depth, containerID, index)
 
 	app := config.Container{
 		App:   container.App,
@@ -112,12 +112,12 @@ func processAppContainer(
 		Post:  container.Post,
 	}
 
-	if err := LaunchApp(app, appMark); err != nil {
+	if err := LaunchApp(app, mark.String()); err != nil {
 		return AppInfo{}, fmt.Errorf("failed to launch app %s: %w", container.App, err)
 	}
 
 	return AppInfo{
-		Mark:   appMark,
+		Mark:   mark.String(),
 		Size:   container.Size,
 		Layout: parentLayout,
 	}, nil
@@ -138,7 +138,7 @@ func processNestedContainer(
 	}
 
 	firstChild := container.Containers[0]
-	containerMark := generateContainerMark(workspaceName, containerID)
+	containerMark := NewContainerMark(workspaceName, containerID)
 	newContainerID := containerID + 1
 
 	if firstChild.App != "" {
@@ -149,7 +149,7 @@ func processNestedContainer(
 			firstChild,
 			depth,
 			containerID,
-			containerMark,
+			containerMark.String(),
 		)
 
 		if err != nil {
@@ -159,8 +159,7 @@ func processNestedContainer(
 		resizeInfo = append(resizeInfo, firstChildInfo...)
 
 		if len(container.Containers) > 1 {
-			focusCmd := fmt.Sprintf("[con_mark=\"%s\"] focus", containerMark)
-			if _, err := RunCommand(focusCmd); err != nil {
+			if err := containerMark.Focus(); err != nil {
 				return resizeInfo, newContainerID, fmt.Errorf("failed to focus container: %w", err)
 			}
 
@@ -209,7 +208,7 @@ func setupContainerWithApp(
 ) ([]AppInfo, error) {
 	var resizeInfo []AppInfo
 
-	firstAppMark := generateAppMark(workspaceName, depth+1, containerID, 0)
+	firstAppMark := NewAppMark(workspaceName, depth+1, containerID, 0).String()
 
 	app := config.Container{
 		App:   firstChild.App,
@@ -223,7 +222,8 @@ func setupContainerWithApp(
 		return nil, fmt.Errorf("failed to launch container's first app: %w", err)
 	}
 
-	if err := ApplyMark(containerMark); err != nil {
+	containerMarkObj := NewMark(containerMark)
+	if err := containerMarkObj.Apply(); err != nil {
 		log.Warn("Failed to apply container mark: %v", err)
 	}
 

@@ -17,8 +17,9 @@ type AppInfo struct {
 }
 
 // Launches an application and marks it
-func LaunchApp(app config.Container, mark string) error {
+func LaunchApp(app config.Container, markID string) error {
 	log.Info("Launching application: %s", app.App)
+	mark := NewMark(markID)
 
 	cmdStr := app.Cmd
 	if cmdStr == "" {
@@ -41,10 +42,10 @@ func LaunchApp(app config.Container, mark string) error {
 	}
 
 	// Apply mark to the application
-	log.Debug("Applying mark '%s' to application", mark)
-	if err := ApplyMark(mark); err != nil {
-		log.Error("Failed to apply mark '%s' to application '%s': %v", mark, app.App, err)
-		return NewMarkError(mark, fmt.Errorf("%w: %v", ErrMarkingFailed, err))
+	log.Debug("Applying mark '%s' to application", mark.String())
+	if err := mark.Apply(); err != nil {
+		log.Error("Failed to apply mark '%s' to application '%s': %v", mark.String(), app.App, err)
+		return NewMarkError(mark.String(), fmt.Errorf("%w: %v", ErrMarkingFailed, err))
 	}
 
 	// Execute post-launch commands if any
@@ -56,7 +57,7 @@ func LaunchApp(app config.Container, mark string) error {
 		}
 	}
 
-	log.Info("Successfully launched application '%s' with mark '%s'", app.App, mark)
+	log.Info("Successfully launched application '%s' with mark '%s'", app.App, mark.String())
 	return nil
 }
 
@@ -137,7 +138,8 @@ func ResizeApps(appInfos []AppInfo) {
 			continue
 		}
 
-		log.Debug("Resizing mark '%s' to '%s' with layout '%s'", app.Mark, app.Size, app.Layout)
+		mark := NewMark(app.Mark)
+		log.Debug("Resizing mark '%s' to '%s' with layout '%s'", mark.String(), app.Size, app.Layout)
 		if err := ResizeMark(app.Mark, app.Size, app.Layout); err != nil {
 			log.Warn("Failed to resize '%s': %v", app.Mark, err)
 		}
@@ -147,42 +149,42 @@ func ResizeApps(appInfos []AppInfo) {
 }
 
 // Resizes a node (app or container) with the given mark
-func ResizeMark(mark string, size string, layout string) error {
-	var dimension string
+func ResizeMark(markID string, size string, layout string) error {
+	mark := NewMark(markID)
+	dimension := getDimensionForLayout(layout)
 
-	// Determine resize dimension based on layout
-	switch layout {
-	case "splith", "tabbed", "h", "t", "horizontal":
-		dimension = "width"
-	case "splitv", "stacking", "v", "s", "vertical":
-		dimension = "height"
-	default:
-		// Default to width for unknown layouts
-		dimension = "width"
-		log.Warn("Unknown layout for resizing: %s, defaulting to width", layout)
-	}
-
-	// Use criteria to focus the container first
-	focusCmd := fmt.Sprintf("[con_mark=\"%s\"] focus", mark)
-	if _, err := RunCommand(focusCmd); err != nil {
-		log.Error("Failed to focus container with mark '%s': %v", mark, err)
-		return NewResizeError(mark, size, dimension, layout,
+	// Focus the container first
+	if err := mark.Focus(); err != nil {
+		return NewResizeError(markID, size, dimension, layout,
 			fmt.Errorf("%w: failed to focus container before resizing", ErrFocusFailed))
 	}
 
 	time.Sleep(100 * time.Millisecond)
 
 	// Then resize the focused container
-	resizeCmd := fmt.Sprintf("resize set %s %s", dimension, size)
+	resizeCmd := mark.ResizeCmd(dimension, size)
 	if _, err := RunCommand(resizeCmd); err != nil {
 		log.Error("Failed to resize container with mark '%s' to %s %s: %v",
-			mark, size, dimension, err)
-		return NewResizeError(mark, size, dimension, layout,
+			markID, size, dimension, err)
+		return NewResizeError(markID, size, dimension, layout,
 			fmt.Errorf("%w: command failed", ErrResizeFailed))
 	}
 
 	time.Sleep(100 * time.Millisecond)
-	log.Debug("Successfully resized container with mark '%s' to %s %s", mark, size, dimension)
+	log.Debug("Successfully resized container with mark '%s' to %s %s", markID, size, dimension)
 
 	return nil
+}
+
+// Determines the resize dimension based on layout type
+func getDimensionForLayout(layout string) string {
+	switch layout {
+	case "splith", "tabbed", "h", "t", "horizontal":
+		return "width"
+	case "splitv", "stacking", "v", "s", "vertical":
+		return "height"
+	default:
+		log.Warn("Unknown layout for resizing: %s, defaulting to width", layout)
+		return "width"
+	}
 }
