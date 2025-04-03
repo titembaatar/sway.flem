@@ -2,9 +2,7 @@
   <a href="https://github.com/titembaatar/sway.flem">
     <img src="https://img.shields.io/badge/version-v0.1.0-b93d4d?style=flat-square&labelColor=446f5e">
   </a>
-  <a href="go.dev">
-    <img src="https://img.shields.io/badge/go-1.24.1-12adad?style=flat-square&logoColor=dceae4&labelColor=446f5e">
-  </a>
+  <img src="https://img.shields.io/badge/go-1.24.1-12adad?style=flat-square&logoColor=dceae4&labelColor=446f5e">
   <a href="https://github.com/titembaatar/sway.flem/blob/main/LICENSE">
     <img src="https://img.shields.io/badge/license-MIT-a353c6?style=flat-square&logoColor=dceae4&labelColor=446f5e">
   </a>
