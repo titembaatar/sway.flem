@@ -1,235 +1,152 @@
 # Configuration Examples
 
-This document provides various example configurations for common use cases.
+## Basic Layouts
 
-## Basic Examples
-
-### Simple Horizontal Split
-
+### Horizontal Split
 ```yaml
 workspaces:
-  "1":
-    layout: "h"
+  1:
+    layout: h
     containers:
       - app: "app1"
-        size: "70ppt"
+        size: 70
       - app: "app2"
-        size: "30ppt"
+        size: 30
 ```
 
-### Simple Vertical Split
-
+### Vertical Split
 ```yaml
 workspaces:
-  "1":
-    layout: "v"
+  1:
+    layout: v
     containers:
-      - app: "app1"
-        size: "70ppt"
-      - app: "app2"
-        size: "30ppt"
+      - app: "top-app"
+        size: 70
+      - app: "bottom-app"
+        size: 30
 ```
 
-### Tabbed Layout
+## Development Environment
 
-```yaml
-workspaces:
-  "1":
-    layout: "tabbed"
-    containers:
-      - app: "app1"
-        size: "33ppt"
-      - app: "app2"
-        size: "33ppt"
-      - app: "app3"
-        size: "34ppt"
-```
-
-### Stacking Layout
-
-```yaml
-workspaces:
-  "1":
-    layout: "stacking"
-    containers:
-      - app: "app1"
-        size: "33ppt"
-      - app: "app2"
-        size: "33ppt"
-      - app: "app3"
-        size: "34ppt"
-```
-
-## Advanced Examples
-
-### Development Environment
-
-A development environment with a code editor, terminal, and browser:
-
+### Code Workspace with Multiple Containers
 ```yaml
 workspaces:
   "dev":
-    layout: "splith"
+    layout: h
     containers:
-      - app: "editor"
-        size: "60ppt"
-      - split: "splitv"
-        size: "40ppt"
+      - app: "code-editor"
+        size: 60
+      - split: v
+        size: 40
         containers:
           - app: "terminal"
-            cmd: "custom-terminal"
-            size: "50ppt"
+            size: 50
           - app: "browser"
-            size: "50ppt"
+            size: 50
 ```
 
-### Communication Workspace
+## Multimedia Workspace
 
-A workspace for chat applications:
-
+### Media and Control Layout
 ```yaml
 workspaces:
-  "comms":
-    layout: "splith"
+  "media":
+    layout: v
     containers:
-      - app: "chat1"
-        size: "33ppt"
-      - app: "chat2"
-        size: "33ppt"
-      - app: "chat3"
-        cmd: "custom-chat-app"
-        size: "34ppt"
+      - app: "music-player"
+        size: 20
+      - split: h
+        size: 80
+        containers:
+          - app: "video-player"
+            size: 70
+          - app: "media-control"
+            size: 30
 ```
 
-### Multi-Monitor Setup
+## Multi-Monitor Setup
 
-Using names for workspaces to help with organization, and focusing specific workspaces on different monitors:
-
+### Workspace Focus and Complex Layout
 ```yaml
-# Focus workspaces on different monitors at the end
 focus:
-  - "2:web"    # Focus this workspace on the second monitor
-  - "1:code"   # Focus this workspace on the first monitor
+  - "2:web"    # Focus on the web workspace first
+  - "1:code"   # Then focus on the code workspace
 
 workspaces:
   "1:code":
-    layout: "splith"
+    layout: h
     containers:
       - app: "editor"
-        size: "70ppt"
+        size: 70
       - app: "terminal"
-        size: "30ppt"
+        size: 30
 
   "2:web":
     layout: "tabbed"
     containers:
       - app: "browser1"
-        size: "100ppt"
       - app: "browser2"
-        size: "100ppt"
 
   "3:comms":
-    layout: "splitv"
+    layout: v
     containers:
       - app: "chat1"
-        size: "50ppt"
+        size: 50
       - app: "chat2"
-        size: "50ppt"
+        size: 50
 ```
 
-This example assumes you've already configured your Sway to assign workspaces to specific outputs, like:
+## Advanced Nested Containers
 
-```
-# In your Sway config (~/.config/sway/config)
-workspace "1:code" output DP-1
-workspace "2:web" output DP-2
-workspace "3:comms" output DP-1
-```
-
-### Complex Nested Layout
-
-A complex layout with multiple nested containers:
-
+### Complex Workspace Layout
 ```yaml
 workspaces:
-  "2":
-    layout: "splith"
+  2:
+    layout: h
     containers:
       - app: "app1"
-        size: "15ppt"
+        size: 15
       - app: "app2"
-        size: "15ppt"
-      - split: "splitv"
-        size: "70ppt"
+        size: 15
+      - split: v
+        size: 70
         containers:
           - app: "app3"
-            size: "15ppt"
+            size: 15
           - app: "app4"
-            size: "15ppt"
-          - split: "splith"
-            size: "70ppt"
+            size: 15
+          - split: h
+            size: 70
             containers:
               - app: "app5"
-                size: "30ppt"
+                size: 30
               - app: "app6"
-                size: "70ppt"
+                size: 70
 ```
 
-Visual representation of this layout:
+## Custom Application Launch
 
-```
-┌────┬────┬────────────────────────┐
-│    │    │          app3          │
-│    │    ├────────────────────────┤
-│    │    │          app4          │
-│    │    ├────────┬───────────────┤
-│app1│app2│        │               │
-│    │    │        │               │
-│    │    │  app5  │     app6      │
-│    │    │        │               │
-│    │    │        │               │
-└────┴────┴────────┴───────────────┘
-```
-
-### Media Workspace
-
-A workspace for media consumption:
-
-```yaml
-workspaces:
-  "media":
-    layout: "splitv"
-    containers:
-      - app: "music-player"
-        size: "20ppt"
-      - split: "splith"
-        size: "80ppt"
-        containers:
-          - app: "video-player"
-            size: "70ppt"
-          - app: "media-control"
-            cmd: "terminal -e media-controller"
-            size: "30ppt"
-```
-
-## Custom Application Commands and Post Actions
-
-Using custom commands to launch applications with specific parameters and post-launch actions:
-
+### With Custom Commands and Post-Launch Actions
 ```yaml
 workspaces:
   "custom":
-    layout: "splith"
+    layout: h
     containers:
       - app: "browser"
-        cmd: "browser --private-window"
-        size: "50ppt"
+        cmd: "firefox --private-window"
+        size: 50
         post:
-          - "browser --new-tab resource1"
-          - "browser --new-tab resource2"
+          - "firefox --new-tab resource1"
+          - "firefox --new-tab resource2"
       - app: "terminal"
-        cmd: "terminal --working-directory ~/projects"
-        size: "50ppt"
+        cmd: "kitty --working-directory ~/projects"
+        size: 50
         post:
-          - "terminal -e 'echo Welcome to your workspace'"
+          - "echo 'Welcome to your workspace'"
 ```
+
+> [!NOTE]
+>
+> - Experiment with different layouts and sizes
+> - The `focus` section helps manage multi-monitor setups
+> - Custom commands and post-launch actions provide flexibility

@@ -1,126 +1,133 @@
-# Troubleshooting
-
-This guide helps you solve common issues that may arise when using sway.flem.
+# Troubleshooting Guide
 
 ## Common Issues
 
-### Configuration File Not Found
+### Configuration Errors
 
-**Error Message**:
-```
-Failed to load configuration: config file not found: open /path/to/config.yaml: no such file or directory
-```
-
-**Solution**:
-- Verify that the file path is correct
-- Check file permissions
-- Use an absolute path to the config file
-
-### Invalid Configuration Format
-
-**Error Message**:
-```
-Failed to decode config: yaml: line X: did not find expected key
-```
-
-**Solution**:
-- Check your YAML syntax at the specified line
-- Ensure proper indentation is used
-- Use a YAML validator tool to check your configuration
-
-### Unknown Layout Type
-
-**Error Message**:
-```
-Configuration error: workspace '1': invalid layout type
-```
-
-**Solution**:
-- Use one of the supported layout types: `splith`, `splitv`, `tabbed`, `stacking` (or their aliases)
-- Check for typos in the layout name
-
-### Missing Required Fields
-
-**Error Message**:
-```
-Configuration error: workspace '1', container at index 0: app is empty
-```
-
-**Solution**:
-- Ensure all required fields (app) are set for app containers
-- Ensure all required fields (split, containers) are set for nested containers
-
-### Applications Not Launching
-
-**Issue**: Applications are defined in the config but don't launch
+#### Invalid Configuration File
+**Symptoms**:
+- Error when running `flem sway`
+- Configuration not loading
 
 **Solutions**:
-- Ensure the application is installed and can be launched from the command line
-- Use the `-debug` flag to see detailed logs about application launching
-- If using a custom command, try simplifying it to just the application name
-- Check if the application needs time to start and adjust your workflow accordingly
+1. Verify YAML syntax
+2. Use `-dry-run` flag to validate configuration
+3. Check indentation and structure
 
-### Windows Not Resizing Correctly
-
-**Issue**: Windows don't get resized to the specified sizes
-
-**Solutions**:
-- Make sure sizes are specified correctly (e.g., `50ppt` for percentage)
-- Some applications may override Sway's window management
-- Try using the `-debug` flag to see detailed resize operations
-
-## Debugging Tips
-
-### Enable Debug Logging
-
-Use the `-debug` flag to get detailed logs:
-
+**Example of Validation**:
 ```bash
-flem sway -config config.yaml -debug
+flem sway -config config.yml -dry-run
 ```
 
-This will print extensive information about:
-- Configuration parsing
-- Application launching
-- Window management commands
-- Error handling
+#### Incorrect Layout Types
+**Symptoms**:
+- Unexpected workspace layout
+- Layout not applied correctly
 
-### Use Dry Run Mode
+**Supported Layouts**:
+- `splith` (horizontal)
+- `splitv` (vertical)
+- `tabbed`
+- `stacking`
 
-The `-dry-run` flag validates your configuration without making any changes:
+### Application Launch Problems
 
-```bash
-flem sway -config config.yaml -dry-run
+#### Application Not Starting
+**Symptoms**:
+- Specified application fails to launch
+- No error in sway.flem output
+
+**Troubleshooting Steps**:
+1. Verify application is installed
+2. Check application command in configuration
+3. Use full path to application
+4. Run with `-debug` for detailed logs
+
+**Example Configuration**:
+```yaml
+containers:
+  - app: "firefox"
+    cmd: "/usr/bin/firefox"  # Use full path if needed
 ```
 
-This is useful for checking if your configuration is valid before applying it.
+### Workspace and Layout Issues
 
-### Check Sway IPC
+#### Unexpected Container Sizes
+**Symptoms**:
+- Containers not sized as expected
+- Uneven workspace distribution
 
-Sometimes issues arise from problems with the Sway IPC interface. You can test basic Sway communication with:
+**Troubleshooting**:
+- Verify size specifications
+- Use percentage points (`ppt`)
+- Ensure total percentages don't exceed 100%
 
-```bash
-swaymsg -t get_workspaces
+**Correct Example**:
+```yaml
+containers:
+  - app: "app1"
+    size: "50ppt"  # Exactly 50%
+  - app: "app2"
+    size: "50ppt"  # Exactly 50%
 ```
 
-If this fails, it indicates a problem with Sway itself rather than sway.flem.
+> [!NOTE]
+>
+> The resizing is handle by Sway, over 2 "containers" resizing one "container" will resize the
+> others. I did not find any workaround. Try changing sizes to get close to what you want.
 
-### Known Limitations
+### Logging and Debugging
 
-- **Application Focus**: Some applications may grab focus when launched, which can interfere with the layout creation process
-- **Window Properties**: Some applications may not respect sizing commands or may have minimum size constraints
-- **Resize**: Because of Sway behavior, when there is too much containers in a split, sizes are not
-  apply correctly. Nothing I can do about it, try different sizes until you are satisfied.
-- **Timing Issues**: If applications take a long time to start, the layout process might not be fully completed
+#### Enabling Verbose Logging
+```bash
+flem sway -config config.yml -verbose
+```
 
-## Getting Help
+#### Enabling Debug Logging
+```bash
+flem sway -config config.yml -debug
+```
 
-If you're experiencing issues not covered in this guide:
+## Advanced Troubleshooting
 
-1. Check the [GitHub Issues](https://github.com/titembaatar/sway.flem/issues) to see if others have encountered the same problem
-2. Create a new issue with:
-   - Your sway.flem version (`flem sway -version`)
-   - Your Sway version (`swaymsg -v`)
-   - Your configuration file
-   - The exact error message or behavior you're seeing
-   - Debug logs can help (`flem sway -debug ...`)
+### Checking Sway Compatibility
+1. Verify Sway version
+2. Ensure `swaymsg` is available
+3. Check Wayland compatibility
+
+### Dependency Verification
+- Go version 1.24.1+
+- Sway window manager
+- Required system utilities
+
+## Reporting Issues
+
+1. Gather log output
+2. Prepare configuration file (remove sensitive information)
+3. Open an issue on GitHub
+   - Include version information
+   - Provide detailed steps to reproduce
+
+**Issue Template**:
+```markdown
+### Environment
+- sway.flem version:
+- Sway version:
+- Go version:
+
+### Description
+[Describe the issue]
+
+### Steps to Reproduce
+1.
+2.
+3.
+
+### Log Output
+```
+
+## Performance Considerations
+
+- Minimize number of applications in a workspace
+- Use reasonable delay between application launches
+- Avoid overly complex nested container structures

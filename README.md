@@ -1,25 +1,31 @@
+<p align="center">
+  <a href="https://github.com/titembaatar/sway.flem">
+    <img src="https://img.shields.io/badge/version-v0.1.0-b93d4d?style=flat-square&labelColor=446f5e">
+  </a>
+  <a href="go.dev">
+    <img src="https://img.shields.io/badge/go-1.24.1-12adad?style=flat-square&logoColor=dceae4&labelColor=446f5e">
+  </a>
+  <a href="https://github.com/titembaatar/sway.flem/blob/main/LICENSE">
+    <img src="https://img.shields.io/badge/license-MIT-a353c6?style=flat-square&logoColor=dceae4&labelColor=446f5e">
+  </a>
+</p>
+
 # sway.flem
 
-![Version](https://img.shields.io/badge/version-0.1.0-blue)
-![Go](https://img.shields.io/badge/go-%3E%3D1.16-blue)
-![License](https://img.shields.io/badge/license-MIT-green)
+**Workspace Automation for Sway Window Manager**
 
-**Auto-launcher for complex Sway workspace environments**
+Effortlessly set up and organize your working environment with a single command.
 
-sway.flem helps you instantly set up your perfect working environment in Sway by automatically launching applications and organizing them into precise layouts based on a YAML configuration file.
+## ✨ Features
 
-## Features
+- Rapid workspace configuration
+- Flexible nested container layouts
+- Control over window sizes and positions
 
-- Launch multiple applications in the right places
-- Configure nested container layouts
-- Control over window sizes and positions (within Sway limitation)
-- Support for all Sway layout types (horizontal, vertical, tabbed, stacking)
-- Easy to understand configuration format
-
-## Quick Start
+## 🚀 Quick Start
 
 ```bash
-# Install
+# Install via Go
 go install github.com/titembaatar/sway.flem/cmd/flem@latest
 
 # Create a basic configuration
@@ -38,23 +44,27 @@ EOF
 flem sway -config ~/.config/sway/config.yml
 ```
 
-## Installation
+## 📦 Installation Options
+
+### Go Install
+```bash
+go install github.com/titembaatar/sway.flem/cmd/flem@latest
+```
 
 ### From Source
-
 ```bash
-# Clone repository
+# Clone the repository
 git clone https://github.com/titembaatar/sway.flem.git
 cd sway.flem
 
-# Build
+# Build the project
 make build
 
 # (Optional) Install to $GOPATH/bin
 go install ./cmd/flem
 ```
 
-## Basic Usage
+## 🛠️ Usage
 
 ```
 flem sway -config <config-file>
@@ -62,37 +72,29 @@ flem sway -config <config-file>
 
 ### Options
 
-```
-  -config string   Path to configuration file
-  -version         Show version information
-  -verbose         Enable verbose logging
-  -debug           Enable debug mode with extra logging
-  -dry-run         Validate configuration without making changes
-```
+- `-config`: Path to configuration file (required)
+- `-version`: Show version information
+- `-verbose`: Enable verbose logging
+- `-debug`: Enable debug mode
+- `-dry-run`: Validate configuration without changes
 
-## Simple Configuration Example
+## 📝 Configuration Example
 
 ```yaml
 workspaces:
-  "2":
-    layout: "h" # horizontal layout
-    apps:
-      - name: "firefox"
-        size: "50ppt"
-      - name: "code"
-        size: "50ppt"
+  1:
+    layout: h
+    containers:
+      - app: firefox
+        size: 50
+      - app: code
+        size: 50 # technically optional because of the way Sway works
 ```
 
-## Advanced Features
-
-- Support for multiple workspaces
-- Nested container layouts
-- Custom commands for launching applications
-- Detailed logging options
-- Automatic error recovery
-
-See the [documentation](docs/README.md) for more advanced configuration examples.
-
-## Contributing
+## 🤝 Contributing
 
 Contributions are welcome! Feel free to submit a Pull Request.
+
+## 📄 License
+
+MIT License

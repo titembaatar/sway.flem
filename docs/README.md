@@ -1,60 +1,51 @@
 # sway.flem Documentation
 
-Welcome to the sway.flem documentation! This guide provides detailed information about installing, configuring, and using sway.flem to create complex workspace environments in the Sway window manager.
+## 📚 Documentation Sections
 
-## Table of Contents
+### 1. 🚀 Getting Started
+- [Installation and Setup](cli.md)
+- [Basic Configuration](configuration.md)
 
-1. [Introduction](#introduction)
-2. [Installation](#installation)
-3. [Configuration Reference](configuration.md)
-4. [Command Line Options](cli.md)
-5. [Examples](examples.md)
-6. [Troubleshooting](troubleshooting.md)
+### 2. 🔧 Configuration Guide
+- [Configuration Reference](configuration.md)
+  - Workspace Layouts
+  - Container Management
+  - Advanced Configuration Options
 
-## Introduction
+### 3. 📋 Command Line Interface
+- [CLI Options and Usage](cli.md)
+  - Command Line Arguments
+  - Logging and Debugging
+  - Workflow Optimization
 
-sway.flem is a tool that automates the creation of complex workspace environments in Sway. It allows you to define your workspaces, containers, and application layouts in a YAML configuration file, and then automatically sets up this environment with a single command.
+### 4. 🎨 Examples and Use Cases
+- [Configuration Examples](examples.md)
+  - Development Environments
+  - Multimedia Workspaces
+  - Multi-Monitor Setups
 
-The tool is designed to be:
-- **Simple**: Easy to understand configuration format
-- **Flexible**: Support for complex nested layouts
-- **Reliable**: Robust error handling and recovery
-- **Fast**: Quick setup of even the most complex environments
+### 5. 🛠️ Troubleshooting
+- [Common Issues and Solutions](troubleshooting.md)
+  - Debugging Techniques
+  - Error Resolution
+  - Performance Optimization
 
-## Installation
+## 💡 Quick Links
 
-### Prerequisites
+- [Main Project README](../README.md)
+- [GitHub Repository](https://github.com/titembaatar/sway.flem)
+- [Issue Tracker](https://github.com/titembaatar/sway.flem/issues)
 
-- Go 1.16 or higher
-- Sway window manager
-- swaymsg utility
+## 🤝 Contributing
 
-### Install from Source
+Found an issue in the documentation? Want to improve it?
 
-```bash
-# Clone repository
-git clone https://github.com/titembaatar/sway.flem.git
-cd sway.flem
+1. Check the [Contributing Guidelines](../CONTRIBUTING.md)
+2. Submit a Pull Request
+3. Help make sway.flem better for everyone!
 
-# Build
-make build
+## 📧 Support
 
-# The binary will be created in the bin directory
-./bin/flem -config example.yaml
-```
-
-### Install using Go
-
-```bash
-# Install directly using go install
-go install github.com/titembaatar/sway.flem/cmd/flem@latest
-
-# Run
-flem sway -config <path-to-config.yaml>
-```
-
-## Next Steps
-
-- Check the [Configuration Reference](configuration.md) for detailed information about the configuration format
-- Browse the [Examples](examples.md) for inspiration on how to set up your own workspace
-- See the [Command Line Options](cli.md) for all available options
+If you encounter any problems or have questions:
+- Open an [Issue on GitHub](https://github.com/titembaatar/sway.flem/issues)
+- Consult the [Troubleshooting Guide](troubleshooting.md)
