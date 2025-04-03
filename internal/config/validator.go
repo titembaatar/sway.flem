@@ -32,40 +32,6 @@ var validLayoutTypes = map[string]string{
 // - Digits followed by "px" (e.g., "800px")
 var sizeRegex = regexp.MustCompile(`^(\d+)(ppt|px)?$`)
 
-func NormalizeLayoutType(layoutType string) (string, error) {
-	if normalized, ok := validLayoutTypes[layoutType]; ok {
-		return normalized, nil
-	}
-	return "", ErrInvalidLayoutType
-}
-
-func ValidateSize(size string) error {
-	if size == "" {
-		return nil
-	}
-
-	if !sizeRegex.MatchString(size) {
-		return ErrInvalidSizeFormat
-	}
-
-	matches := sizeRegex.FindStringSubmatch(size)
-	if len(matches) < 2 {
-		return ErrInvalidSizeFormat
-	}
-
-	numStr := matches[1]
-	num, err := strconv.Atoi(numStr)
-	if err != nil {
-		return ErrInvalidSizeFormat
-	}
-
-	if num < 0 {
-		return ErrInvalidSizeFormat
-	}
-
-	return nil
-}
-
 func ValidateConfig(config *Config) error {
 	if len(config.Workspaces) == 0 {
 		return NewConfigError(ErrNoWorkspaces, "", "", -1)
@@ -101,7 +67,6 @@ func validateWorkspace(name string, workspace Workspace) error {
 		return NewConfigError(ErrNoContainers, name, "", -1)
 	}
 
-	// Validate each container in the workspace
 	for i, container := range workspace.Containers {
 		if err := validateContainer(name, container, fmt.Sprintf("container[%d]", i)); err != nil {
 			return err
@@ -112,47 +77,90 @@ func validateWorkspace(name string, workspace Workspace) error {
 }
 
 func validateContainer(workspaceName string, container Container, context string) error {
-	// Check if this is an app container or a nested container
 	isApp := container.App != ""
 	isNestedContainer := len(container.Containers) > 0
 
-	// A container must be either an app or have nested containers, not both
 	if isApp && isNestedContainer {
 		return NewConfigError(ErrInvalidContainerStructure, workspaceName, context, -1)
 	}
 
-	// A container must be either an app or have nested containers, not neither
 	if !isApp && !isNestedContainer {
 		return NewConfigError(ErrInvalidContainerStructure, workspaceName, context, -1)
 	}
 
-	// Validate the size format if specified
+	if err := validateContainerProperties(workspaceName, container, context); err != nil {
+		return err
+	}
+
+	if isNestedContainer {
+		if err := validateNestedContainer(workspaceName, container, context); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func validateContainerProperties(workspaceName string, container Container, context string) error {
 	if container.Size != "" {
 		if err := ValidateSize(container.Size); err != nil {
 			return NewConfigError(err, workspaceName, fmt.Sprintf("%s.size", context), -1)
 		}
 	}
 
-	// If this is a nested container, validate split and nested containers
-	if isNestedContainer {
-		if container.Split == "" {
-			return NewConfigError(ErrMissingSplit, workspaceName, context, -1)
-		}
+	return nil
+}
 
-		// Normalize split
-		normalizedSplit, err := NormalizeLayoutType(container.Split)
-		if err != nil {
-			return NewConfigError(err, workspaceName, fmt.Sprintf("%s.split", context), -1)
-		}
-		container.Split = normalizedSplit
+func validateNestedContainer(workspaceName string, container Container, context string) error {
+	if container.Split == "" {
+		return NewConfigError(ErrMissingSplit, workspaceName, context, -1)
+	}
 
-		// Validate nested containers
-		for i, nestedContainer := range container.Containers {
-			nestedContext := fmt.Sprintf("%s.containers[%d]", context, i)
-			if err := validateContainer(workspaceName, nestedContainer, nestedContext); err != nil {
-				return err
-			}
+	normalizedSplit, err := NormalizeLayoutType(container.Split)
+	if err != nil {
+		return NewConfigError(err, workspaceName, fmt.Sprintf("%s.split", context), -1)
+	}
+	container.Split = normalizedSplit
+
+	for i, nestedContainer := range container.Containers {
+		nestedContext := fmt.Sprintf("%s.containers[%d]", context, i)
+		if err := validateContainer(workspaceName, nestedContainer, nestedContext); err != nil {
+			return err
 		}
+	}
+
+	return nil
+}
+
+func NormalizeLayoutType(layoutType string) (string, error) {
+	if normalized, ok := validLayoutTypes[layoutType]; ok {
+		return normalized, nil
+	}
+	return "", ErrInvalidLayoutType
+}
+
+func ValidateSize(size string) error {
+	if size == "" {
+		return nil
+	}
+
+	if !sizeRegex.MatchString(size) {
+		return ErrInvalidSizeFormat
+	}
+
+	matches := sizeRegex.FindStringSubmatch(size)
+	if len(matches) < 2 {
+		return ErrInvalidSizeFormat
+	}
+
+	numStr := matches[1]
+	num, err := strconv.Atoi(numStr)
+	if err != nil {
+		return ErrInvalidSizeFormat
+	}
+
+	if num < 0 {
+		return ErrInvalidSizeFormat
 	}
 
 	return nil
