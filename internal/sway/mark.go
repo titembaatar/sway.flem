@@ -34,8 +34,13 @@ func generateContainerMark(workspaceName string, containerID int) string {
 func ApplyMark(mark string) error {
 	log.Debug("Applying mark '%s' to focused container", mark)
 	command := fmt.Sprintf("mark --add %s", mark)
+
 	_, err := RunCommand(command)
-	return err
+	if err != nil {
+		return NewMarkError(mark, fmt.Errorf("%w: %v", ErrMarkingFailed, err))
+	}
+
+	return nil
 }
 
 // Retrieves all nodes with marks (for debugging purposes)

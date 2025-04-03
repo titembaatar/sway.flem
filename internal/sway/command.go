@@ -16,6 +16,7 @@ type CommandResponse struct {
 	Error   string `json:"error,omitempty"`
 }
 
+// Options for executing sway commands
 type SwayCommandOptions struct {
 	Type           string // command, get_workspaces, get_marks, etc.
 	Raw            bool   // Whether to use -r flag for raw output
@@ -23,6 +24,7 @@ type SwayCommandOptions struct {
 	ErrorsNonFatal bool   // Whether errors should be treated as non-fatal
 }
 
+// Returns standard options for regular sway commands
 func DefaultCommandOptions() SwayCommandOptions {
 	return SwayCommandOptions{
 		Type:           "command",
@@ -40,6 +42,7 @@ func RunCommand(command string) ([]CommandResponse, error) {
 	return executeSwaymsg(command, opts)
 }
 
+// Helper for executing swaymsg commands
 func executeSwaymsg(command string, opts SwayCommandOptions) ([]CommandResponse, error) {
 	args := []string{"-t", opts.Type}
 
@@ -63,7 +66,7 @@ func executeSwaymsg(command string, opts SwayCommandOptions) ([]CommandResponse,
 		if errMsg != "" {
 			log.Error("Stderr: %s", errMsg)
 		}
-		return nil, fmt.Errorf("swaymsg error: %w: %s", err, errMsg)
+		return nil, NewSwayCommandError(command, err, errMsg)
 	}
 
 	// If we don't expect JSON, just return empty response
@@ -91,7 +94,9 @@ func executeSwaymsg(command string, opts SwayCommandOptions) ([]CommandResponse,
 	return responses, nil
 }
 
-func executeSwayGetJSON(command string, outputType string, v interface{}) error {
+// Helper for sway commands that return JSON data
+func executeSwayGetJSON(command string, outputType string, v any) error {
+	// Always use raw output for JSON commands
 	args := []string{"-t", outputType, "-r"}
 	if command != "" {
 		args = append(args, "--", command)
@@ -122,6 +127,7 @@ func executeSwayGetJSON(command string, outputType string, v interface{}) error 
 	return nil
 }
 
+// Retrieves the list of workspaces from sway
 func GetWorkspaces() ([]string, error) {
 	log.Debug("Getting workspaces from sway")
 
@@ -143,28 +149,39 @@ func GetWorkspaces() ([]string, error) {
 	return names, nil
 }
 
+// Switches to the specified workspace
 func SwitchToWorkspace(workspace string) error {
 	command := fmt.Sprintf("workspace %s", workspace)
 	_, err := RunCommand(command)
 	return err
 }
 
+// Creates a new workspace with the specified name and layout
 func CreateWorkspace(name string, layout string) error {
 	if err := SwitchToWorkspace(name); err != nil {
-		return err
+		return fmt.Errorf("%w: failed to switch to workspace '%s': %v",
+			ErrWorkspaceCreateFailed, name, err)
 	}
 
 	command := fmt.Sprintf("layout %s", layout)
 	_, err := RunCommand(command)
-	return err
+	if err != nil {
+		return fmt.Errorf("%w: failed to set layout '%s' for workspace '%s': %v",
+			ErrWorkspaceCreateFailed, layout, name, err)
+	}
+
+	log.Info("Successfully created workspace '%s' with layout '%s'", name, layout)
+	return nil
 }
 
+// Focuses a container with the specified mark
 func FocusByMark(mark string) error {
 	command := fmt.Sprintf("[con_mark=\"%s\"] focus", mark)
 	_, err := RunCommand(command)
 	return err
 }
 
+// Switches focus to each of the specified workspaces in order.
 func FocusWorkspaces(workspaces []string) error {
 	log.Info("Focusing on %d workspaces", len(workspaces))
 	var errors []string
