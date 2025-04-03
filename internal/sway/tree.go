@@ -1,6 +1,7 @@
 package sway
 
 import (
+	"slices"
 	"strings"
 
 	"github.com/titembaatar/sway.flem/internal/log"
@@ -8,12 +9,16 @@ import (
 
 // Window in the Sway tree
 type WindowInfo struct {
-	ID      int    // Sway internal ID
-	Name    string // Window title
-	AppID   string // Wayland app_id
-	Class   string // X11 window class
-	PID     int    // Process ID
-	Focused bool   // Is the window focused
+	ID          int      // Sway internal ID
+	Name        string   // Window title
+	AppID       string   // Wayland app_id
+	Class       string   // X11 window class
+	Instance    string   // X11 window instance
+	PID         int      // Process ID
+	Focused     bool     // Is the window focused
+	Workspace   string   // Workspace name
+	WorkspaceID int      // Workspace ID
+	Marks       []string // Marks applied to this window
 }
 
 // Sway tree JSON structure
@@ -24,9 +29,12 @@ type Node struct {
 	AppID            string            `json:"app_id"`
 	PID              int               `json:"pid"`
 	Focused          bool              `json:"focused"`
+	Marks            []string          `json:"marks"`
 	WindowProperties *WindowProperties `json:"window_properties,omitempty"`
 	Nodes            []Node            `json:"nodes"`
 	FloatingNodes    []Node            `json:"floating_nodes"`
+	workspace        string
+	workspaceID      int
 }
 
 type WindowProperties struct {
@@ -50,14 +58,22 @@ func GetAllWindows() ([]WindowInfo, error) {
 func collectWindows(node Node) []WindowInfo {
 	var windows []WindowInfo
 
+	if node.Type == "workspace" && node.Name != "__i3_scratch" {
+		node.workspace = node.Name
+		node.workspaceID = node.ID
+	}
+
 	if node.Type == "con" {
 		if isWindow(node) {
 			window := WindowInfo{
-				ID:      node.ID,
-				Name:    node.Name,
-				AppID:   node.AppID,
-				PID:     node.PID,
-				Focused: node.Focused,
+				ID:          node.ID,
+				Name:        node.Name,
+				AppID:       node.AppID,
+				PID:         node.PID,
+				Focused:     node.Focused,
+				Workspace:   node.workspace,
+				WorkspaceID: node.workspaceID,
+				Marks:       node.Marks,
 			}
 
 			if node.WindowProperties != nil {
@@ -69,10 +85,14 @@ func collectWindows(node Node) []WindowInfo {
 	}
 
 	for _, child := range node.Nodes {
+		child.workspace = node.workspace
+		child.workspaceID = node.workspaceID
 		windows = append(windows, collectWindows(child)...)
 	}
 
 	for _, child := range node.FloatingNodes {
+		child.workspace = node.workspace
+		child.workspaceID = node.workspaceID
 		windows = append(windows, collectWindows(child)...)
 	}
 
@@ -83,37 +103,27 @@ func isWindow(node Node) bool {
 	return node.AppID != "" || (node.WindowProperties != nil && node.WindowProperties.Class != "")
 }
 
-func FindWindowsByApp(appName string, windows []WindowInfo) []WindowInfo {
-	log.Debug("Searching for windows with app name: %s", appName)
-
-	appNameLower := strings.ToLower(appName)
-	var matches []WindowInfo
+func FindWindowByMark(mark string, windows []WindowInfo) *WindowInfo {
+	log.Debug("Searching for window with mark: %s", mark)
 
 	for _, window := range windows {
-		if window.AppID != "" && strings.ToLower(window.AppID) == appNameLower {
-			log.Debug("Found matching window by app_id: %s (ID: %d, Name: %s)",
-				window.AppID, window.ID, window.Name)
-			matches = append(matches, window)
-			continue
-		}
-
-		if window.Class != "" && strings.ToLower(window.Class) == appNameLower {
-			log.Debug("Found matching window by class: %s (ID: %d, Name: %s)",
-				window.Class, window.ID, window.Name)
-			matches = append(matches, window)
+		if slices.Contains(window.Marks, mark) {
+			log.Debug("Found window with mark %s: ID=%d, Name=%s, Workspace=%s",
+				mark, window.ID, window.Name, window.Workspace)
+			return &window
 		}
 	}
 
-	log.Debug("Found %d matching windows for app: %s", len(matches), appName)
-	return matches
+	log.Debug("No window found with mark: %s", mark)
+	return nil
 }
 
-func IsAppRunning(appName string) (bool, []WindowInfo, error) {
+func IsAppRunning(mark string) (bool, *WindowInfo, error) {
 	windows, err := GetAllWindows()
 	if err != nil {
 		return false, nil, err
 	}
 
-	matches := FindWindowsByApp(appName, windows)
-	return len(matches) > 0, matches, nil
+	window := FindWindowByMark(mark, windows)
+	return window != nil, window, nil
 }
