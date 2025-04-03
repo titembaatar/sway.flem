@@ -36,6 +36,8 @@ func DefaultCommandOptions() SwayCommandOptions {
 
 // Executes a swaymsg command and returns the result
 func RunCommand(command string) ([]CommandResponse, error) {
+	log.SetComponent(log.ComponentSway)
+
 	log.Debug("Executing sway command: %s", command)
 
 	opts := DefaultCommandOptions()
@@ -44,6 +46,9 @@ func RunCommand(command string) ([]CommandResponse, error) {
 
 // Helper for executing swaymsg commands
 func executeSwaymsg(command string, opts SwayCommandOptions) ([]CommandResponse, error) {
+	cmdOp := log.Operation(fmt.Sprintf("sway command '%s'", command))
+	cmdOp.Begin()
+
 	args := []string{"-t", opts.Type}
 
 	if opts.Raw {
@@ -53,6 +58,7 @@ func executeSwaymsg(command string, opts SwayCommandOptions) ([]CommandResponse,
 	// Add -- to prevent swaymsg from interpreting args
 	args = append(args, "--", command)
 
+	log.Debug("Full swaymsg command: swaymsg %s", strings.Join(args, " "))
 	cmd := exec.Command("swaymsg", args...)
 
 	var stdout, stderr bytes.Buffer
@@ -62,35 +68,42 @@ func executeSwaymsg(command string, opts SwayCommandOptions) ([]CommandResponse,
 	err := cmd.Run()
 	if err != nil {
 		errMsg := stderr.String()
-		log.Error("Failed to execute sway command: %v", err)
+		log.Error("Failed to execute sway command '%s': %v", command, err)
 		if errMsg != "" {
-			log.Error("Stderr: %s", errMsg)
+			log.Error("Command stderr: %s", errMsg)
 		}
+		cmdOp.EndWithError(err)
 		return nil, NewSwayCommandError(command, err, errMsg)
 	}
 
 	// If we don't expect JSON, just return empty response
 	if !opts.ExpectJSON {
+		cmdOp.End()
 		return []CommandResponse{{Success: true}}, nil
 	}
 
 	// Parse the JSON response
 	var responses []CommandResponse
 	if err := json.Unmarshal(stdout.Bytes(), &responses); err != nil {
-		log.Error("Failed to parse sway command response: %v", err)
+		log.Error("Failed to parse response for command '%s': %v", command, err)
 		log.Debug("Raw response: %s", stdout.String())
+		cmdOp.EndWithError(err)
 		return nil, fmt.Errorf("failed to parse sway command response: %w", err)
 	}
 
 	// Check for command success
 	for i, resp := range responses {
 		if !resp.Success && !opts.ErrorsNonFatal {
-			log.Error("Sway command failed: %s", resp.Error)
-			return responses, fmt.Errorf("sway command failed: %s", resp.Error)
+			log.Error("Sway command '%s' failed: %s", command, resp.Error)
+			cmdErr := fmt.Errorf("sway command failed: %s", resp.Error)
+			cmdOp.EndWithError(cmdErr)
+			return responses, cmdErr
 		}
 		log.Debug("Command response %d: success=%v", i, resp.Success)
 	}
 
+	log.Debug("Successfully executed sway command '%s'", command)
+	cmdOp.End()
 	return responses, nil
 }
 

@@ -3,6 +3,7 @@ package app
 import (
 	"fmt"
 	"os/exec"
+	"strings"
 	"time"
 
 	"github.com/titembaatar/sway.flem/internal/config"
@@ -12,13 +13,18 @@ import (
 
 // Initializes and configures the Sway environment based on the configuration
 func Setup(config *config.Config) error {
-	log.Info("Starting environment setup")
+	log.SetComponent(log.ComponentApp)
+
+	op := log.Operation("environment setup")
+	op.Begin()
 
 	if err := validateEnvironment(); err != nil {
+		op.EndWithError(err)
 		return err
 	}
 
 	if err := executeSetup(config); err != nil {
+		op.EndWithError(err)
 		return err
 	}
 
@@ -26,34 +32,46 @@ func Setup(config *config.Config) error {
 		log.Warn("Some workspace focusing operations failed: %v", err)
 	}
 
+	op.End()
 	return nil
 }
 
 // Verifies that all required external dependencies are available
 func validateEnvironment() error {
-	log.Debug("Validating environment and dependencies")
+	envOp := log.Operation("dependency validation")
+	envOp.Begin()
+
+	log.Debug("Checking for required dependencies")
 
 	if err := checkCommand("swaymsg"); err != nil {
+		envOp.EndWithError(err)
 		return fmt.Errorf("swaymsg not found: %w", err)
 	}
 
 	log.Debug("All dependencies are available")
+	envOp.End()
 	return nil
 }
 
 // Execute the environment setup
 func executeSetup(config *config.Config) error {
-	log.Info("Configuring Sway environment")
+	setupOp := log.Operation("sway configuration")
+	setupOp.Begin()
+
+	workspaceCount := len(config.Workspaces)
+	log.Info("Configuring %d workspaces", workspaceCount)
 
 	startTime := time.Now()
 
 	if err := sway.SetupEnvironment(config); err != nil {
+		setupOp.EndWithError(err)
 		return fmt.Errorf("failed to setup environment: %w", err)
 	}
 
 	elapsed := time.Since(startTime)
 	log.Info("Environment setup completed in %.2f seconds", elapsed.Seconds())
 
+	setupOp.End()
 	return nil
 }
 
@@ -63,8 +81,19 @@ func focusRequestedWorkspaces(config *config.Config) error {
 		return nil
 	}
 
-	log.Info("Focusing on specified workspaces: %v", config.Focus)
-	return sway.FocusWorkspaces(config.Focus)
+	focusOp := log.Operation("workspace focusing")
+	focusOp.Begin()
+
+	log.Info("Focusing on %d specified workspaces: %v", len(config.Focus), config.Focus)
+	err := sway.FocusWorkspaces(config.Focus)
+
+	if err != nil {
+		focusOp.EndWithError(err)
+	} else {
+		focusOp.End()
+	}
+
+	return err
 }
 
 // Checks if a command is available in the PATH
@@ -75,13 +104,14 @@ func checkCommand(command string) error {
 	output, err := cmd.CombinedOutput()
 
 	if err != nil {
-		log.Error("%s is not available: %v", command, err)
+		log.Error("Required command '%s' is not available: %v", command, err)
 		if len(output) > 0 {
 			log.Error("Command output: %s", string(output))
 		}
 		return fmt.Errorf("%s is not available: %w", command, err)
 	}
 
-	log.Debug("%s is available, version: %s", command, string(output))
+	outputStr := strings.TrimSpace(string(output))
+	log.Debug("Command '%s' is available, version: %s", command, outputStr)
 	return nil
 }
