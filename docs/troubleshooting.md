@@ -108,24 +108,6 @@ flem sway -config config.yml -debug
    - Include version information
    - Provide detailed steps to reproduce
 
-**Issue Template**:
-```markdown
-### Environment
-- sway.flem version:
-- Sway version:
-- Go version:
-
-### Description
-[Describe the issue]
-
-### Steps to Reproduce
-1.
-2.
-3.
-
-### Log Output
-```
-
 ## Performance Considerations
 
 - Minimize number of applications in a workspace
