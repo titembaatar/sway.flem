@@ -53,7 +53,18 @@ func (l LayoutType) Command() string {
 
 // Sway command for splitting in this layout
 func (l LayoutType) SplitCommand() string {
-	return fmt.Sprintf("split %s", l)
+	switch l {
+	case LayoutHorizontal:
+		return "split h"
+	case LayoutVertical:
+		return "split v"
+	case LayoutTabbed:
+		return "split h"
+	case LayoutStacking:
+		return "split v"
+	default:
+		return fmt.Sprintf("split h") // Default to horizontal
+	}
 }
 
 // Dimension to use for resizing with this layout

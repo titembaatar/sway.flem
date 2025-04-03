@@ -258,7 +258,21 @@ func setContainerLayout(layoutType string) error {
 		return fmt.Errorf("%w: '%s' is not a valid layout type", ErrInvalidLayout, layoutType)
 	}
 
-	splitCmd := layout.SplitCommand()
-	_, err = RunCommand(splitCmd)
-	return err
+	commands := []string{layout.SplitCommand()}
+
+	switch layout {
+	case types.LayoutTabbed:
+		commands = append(commands, types.LayoutTabbed.Command())
+	case types.LayoutStacking:
+		commands = append(commands, types.LayoutStacking.Command())
+	default:
+	}
+
+	for _, command := range commands {
+		if _, err := RunCommand(command); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
