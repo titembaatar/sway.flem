@@ -5,6 +5,7 @@ import (
 
 	"github.com/titembaatar/sway.flem/internal/config"
 	"github.com/titembaatar/sway.flem/internal/log"
+	"github.com/titembaatar/sway.flem/pkg/types"
 )
 
 // Sets up the entire environment from the configuration
@@ -29,14 +30,14 @@ func SetupEnvironment(cfg *config.Config) error {
 func SetupWorkspace(workspaceName string, workspace config.Workspace) error {
 	log.Info("Setting up workspace: %s", workspaceName)
 
-	if err := CreateWorkspace(workspaceName, workspace.Layout); err != nil {
+	if err := CreateWorkspace(workspaceName, workspace.Layout.String()); err != nil {
 		return fmt.Errorf("failed to create workspace: %w", err)
 	}
 
 	var resizeInfo []AppInfo
 
 	if len(workspace.Containers) > 0 {
-		containerInfo, err := processContainers(workspaceName, workspace.Layout, workspace.Containers, 0)
+		containerInfo, err := processContainers(workspaceName, workspace.Layout.String(), workspace.Containers, 0)
 		if err != nil {
 			log.Error("Failed to process workspace containers: %v", err)
 		} else {
@@ -165,7 +166,7 @@ func processNestedContainer(
 
 			childInfo, err := processContainers(
 				workspaceName,
-				container.Split,
+				container.Split.String(),
 				container.Containers[1:],
 				depth+1,
 			)
@@ -181,7 +182,7 @@ func processNestedContainer(
 
 		childInfo, err := processContainers(
 			workspaceName,
-			container.Split,
+			container.Split.String(),
 			container.Containers,
 			depth+1,
 		)
@@ -227,7 +228,7 @@ func setupContainerWithApp(
 		log.Warn("Failed to apply container mark: %v", err)
 	}
 
-	if err := setContainerLayout(container.Split); err != nil {
+	if err := setContainerLayout(container.Split.String()); err != nil {
 		log.Warn("Failed to set container layout: %v", err)
 	}
 
@@ -243,7 +244,7 @@ func setupContainerWithApp(
 		resizeInfo = append(resizeInfo, AppInfo{
 			Mark:   firstAppMark,
 			Size:   firstChild.Size,
-			Layout: container.Split,
+			Layout: container.Split.String(),
 		})
 	}
 
@@ -252,7 +253,12 @@ func setupContainerWithApp(
 
 // Applies the specified layout to the current container
 func setContainerLayout(layoutType string) error {
-	splitCmd := fmt.Sprintf("split %s", layoutType)
-	_, err := RunCommand(splitCmd)
+	layout, err := types.ParseLayoutType(layoutType)
+	if err != nil {
+		return fmt.Errorf("%w: '%s' is not a valid layout type", ErrInvalidLayout, layoutType)
+	}
+
+	splitCmd := layout.SplitCommand()
+	_, err = RunCommand(splitCmd)
 	return err
 }

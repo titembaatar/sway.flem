@@ -8,6 +8,7 @@ import (
 
 	"github.com/titembaatar/sway.flem/internal/config"
 	"github.com/titembaatar/sway.flem/internal/log"
+	"github.com/titembaatar/sway.flem/pkg/types"
 )
 
 type AppInfo struct {
@@ -178,13 +179,11 @@ func ResizeMark(markID string, size string, layout string) error {
 
 // Determines the resize dimension based on layout type
 func getDimensionForLayout(layout string) string {
-	switch layout {
-	case "splith", "tabbed", "h", "t", "horizontal":
-		return "width"
-	case "splitv", "stacking", "v", "s", "vertical":
-		return "height"
-	default:
+	layoutType, err := types.ParseLayoutType(layout)
+	if err != nil {
 		log.Warn("Unknown layout for resizing: %s, defaulting to width", layout)
 		return "width"
 	}
+
+	return layoutType.ResizeDimension()
 }
