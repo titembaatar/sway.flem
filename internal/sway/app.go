@@ -97,6 +97,10 @@ func executeCommand(cmdStr string) error {
 		return fmt.Errorf("empty command")
 	}
 
+	if err := validateCommand(parts[0]); err != nil {
+		return err
+	}
+
 	var cmd *exec.Cmd
 	if len(parts) == 1 {
 		cmd = exec.Command(parts[0])
@@ -106,6 +110,21 @@ func executeCommand(cmdStr string) error {
 
 	log.Debug("Executing command: %s", cmdStr)
 	return cmd.Start()
+}
+
+// Checks if a command exists in the PATH
+func validateCommand(command string) error {
+	if strings.ContainsAny(command, "/\\") {
+		return nil
+	}
+
+	_, err := exec.LookPath(command)
+	if err != nil {
+		log.Error("Command '%s' not found in PATH: %v", command, err)
+		return fmt.Errorf("command '%s' not found in PATH: %w", command, err)
+	}
+
+	return nil
 }
 
 // Resizes a list of applications according to their stored information
