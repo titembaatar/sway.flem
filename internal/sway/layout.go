@@ -16,7 +16,7 @@ func SetupEnvironment(cfg *config.Config) error {
 
 		if err := SetupWorkspace(name, workspace); err != nil {
 			log.Error("Failed to set up workspace %s: %v", name, err)
-			// Continue with other workspaces even if one fails
+
 			continue
 		}
 	}
@@ -33,10 +33,8 @@ func SetupWorkspace(workspaceName string, workspace config.Workspace) error {
 		return fmt.Errorf("failed to create workspace: %w", err)
 	}
 
-	// Collect all applications that will need to be resized
 	var resizeInfo []AppInfo
 
-	// Process all top-level containers
 	if len(workspace.Containers) > 0 {
 		containerInfo, err := processContainers(workspaceName, workspace.Layout, workspace.Containers, 0)
 		if err != nil {
@@ -46,150 +44,215 @@ func SetupWorkspace(workspaceName string, workspace config.Workspace) error {
 		}
 	}
 
-	// Perform all resize operations
 	ResizeApps(resizeInfo)
 
 	log.Info("Workspace %s setup complete", workspaceName)
 	return nil
 }
 
-// Process a list of containers at the same level
+// Processes a list of containers at the same level
 func processContainers(workspaceName, parentLayout string, containers []config.Container, depth int) ([]AppInfo, error) {
 	log.Info("Processing %d containers at depth %d", len(containers), depth)
 
 	var resizeInfo []AppInfo
 
-	// We need to keep track of container IDs at each depth level
 	containerCounter := depth
 
 	for i, container := range containers {
-		// Determine if this is an app or a nested container
 		isApp := container.App != ""
 
 		if isApp {
-			// This is an app container
-			appMark := generateAppMark(workspaceName, depth, containerCounter, i)
-
-			// Launch the app
-			app := config.Container{
-				App:   container.App,
-				Cmd:   container.Cmd,
-				Size:  container.Size,
-				Delay: container.Delay,
-				Post:  container.Post,
-			}
-
-			if err := LaunchApp(app, appMark); err != nil {
-				log.Error("Failed to launch app %s: %v", container.App, err)
+			appInfo, err := processAppContainer(workspaceName, parentLayout, container, depth, containerCounter, i)
+			if err != nil {
+				log.Error("Failed to process app container %s: %v", container.App, err)
 				continue
 			}
 
-			if container.Size != "" {
-				resizeInfo = append(resizeInfo, AppInfo{
-					Mark:   appMark,
-					Size:   container.Size,
-					Layout: parentLayout,
-				})
+			if appInfo.Size != "" {
+				resizeInfo = append(resizeInfo, appInfo)
 			}
 		} else {
-			// We need at least one app in the container to create it
-			if len(container.Containers) == 0 {
-				log.Error("Container has no child containers, skipping")
+			containerResizeInfo, newContainerID, err := processNestedContainer(
+				workspaceName,
+				parentLayout,
+				container,
+				depth,
+				containerCounter,
+			)
+
+			if err != nil {
+				log.Error("Failed to process nested container: %v", err)
 				continue
 			}
 
-			// Process the first child to establish the container
-			firstChild := container.Containers[0]
-			containerMark := generateContainerMark(workspaceName, containerCounter)
-			containerCounter++
-
-			// First child is an app
-			if firstChild.App != "" {
-				firstAppMark := generateAppMark(workspaceName, depth+1, containerCounter-1, 0)
-
-				// Launch the first app
-				app := config.Container{
-					App:   firstChild.App,
-					Cmd:   firstChild.Cmd,
-					Size:  firstChild.Size,
-					Delay: firstChild.Delay,
-					Post:  firstChild.Post,
-				}
-
-				if err := LaunchApp(app, firstAppMark); err != nil {
-					log.Error("Failed to launch container's first app: %v", err)
-					continue
-				}
-
-				// Also mark this app as the container
-				if err := ApplyMark(containerMark); err != nil {
-					log.Warn("Failed to apply container mark: %v", err)
-				}
-
-				// Set the container's layout
-				splitCmd := fmt.Sprintf("split %s", container.Split)
-				if _, err := RunCommand(splitCmd); err != nil {
-					log.Warn("Failed to set split layout: %v", err)
-					// Continue anyway as this might be expected
-				}
-
-				if container.Size != "" {
-					resizeInfo = append(resizeInfo, AppInfo{
-						Mark:   containerMark,
-						Size:   container.Size,
-						Layout: parentLayout,
-					})
-				}
-
-				if firstChild.Size != "" {
-					resizeInfo = append(resizeInfo, AppInfo{
-						Mark:   firstAppMark,
-						Size:   firstChild.Size,
-						Layout: container.Split,
-					})
-				}
-
-				// Process remaining children in this container
-				if len(container.Containers) > 1 {
-					// Focus the container
-					focusCmd := fmt.Sprintf("[con_mark=\"%s\"] focus", containerMark)
-					if _, err := RunCommand(focusCmd); err != nil {
-						log.Error("Failed to focus container: %v", err)
-						continue
-					}
-
-					// Process remaining containers (skip the first one)
-					childInfo, err := processContainers(
-						workspaceName,
-						container.Split,
-						container.Containers[1:],
-						depth+1,
-					)
-					if err != nil {
-						log.Error("Failed to process child containers: %v", err)
-					} else {
-						resizeInfo = append(resizeInfo, childInfo...)
-					}
-				}
-			} else {
-				// First child is another container - recursively process it
-				log.Warn("First child of container is not an app but another container - this might cause layout issues")
-
-				// Just process all children and hope for the best
-				childInfo, err := processContainers(
-					workspaceName,
-					container.Split,
-					container.Containers,
-					depth+1,
-				)
-				if err != nil {
-					log.Error("Failed to process child containers: %v", err)
-				} else {
-					resizeInfo = append(resizeInfo, childInfo...)
-				}
-			}
+			containerCounter = newContainerID
+			resizeInfo = append(resizeInfo, containerResizeInfo...)
 		}
 	}
 
 	return resizeInfo, nil
+}
+
+// Handles a single application container
+func processAppContainer(
+	workspaceName string,
+	parentLayout string,
+	container config.Container,
+	depth int,
+	containerID int,
+	index int,
+) (AppInfo, error) {
+	appMark := generateAppMark(workspaceName, depth, containerID, index)
+
+	app := config.Container{
+		App:   container.App,
+		Cmd:   container.Cmd,
+		Size:  container.Size,
+		Delay: container.Delay,
+		Post:  container.Post,
+	}
+
+	if err := LaunchApp(app, appMark); err != nil {
+		return AppInfo{}, fmt.Errorf("failed to launch app %s: %w", container.App, err)
+	}
+
+	return AppInfo{
+		Mark:   appMark,
+		Size:   container.Size,
+		Layout: parentLayout,
+	}, nil
+}
+
+// Handles a container with child containers
+func processNestedContainer(
+	workspaceName string,
+	parentLayout string,
+	container config.Container,
+	depth int,
+	containerID int,
+) ([]AppInfo, int, error) {
+	var resizeInfo []AppInfo
+
+	if len(container.Containers) == 0 {
+		return nil, containerID, fmt.Errorf("container has no child containers")
+	}
+
+	firstChild := container.Containers[0]
+	containerMark := generateContainerMark(workspaceName, containerID)
+	newContainerID := containerID + 1
+
+	if firstChild.App != "" {
+		firstChildInfo, err := setupContainerWithApp(
+			workspaceName,
+			parentLayout,
+			container,
+			firstChild,
+			depth,
+			containerID,
+			containerMark,
+		)
+
+		if err != nil {
+			return nil, newContainerID, fmt.Errorf("failed to setup container with app: %w", err)
+		}
+
+		resizeInfo = append(resizeInfo, firstChildInfo...)
+
+		if len(container.Containers) > 1 {
+			focusCmd := fmt.Sprintf("[con_mark=\"%s\"] focus", containerMark)
+			if _, err := RunCommand(focusCmd); err != nil {
+				return resizeInfo, newContainerID, fmt.Errorf("failed to focus container: %w", err)
+			}
+
+			childInfo, err := processContainers(
+				workspaceName,
+				container.Split,
+				container.Containers[1:],
+				depth+1,
+			)
+
+			if err != nil {
+				log.Error("Failed to process child containers: %v", err)
+			} else {
+				resizeInfo = append(resizeInfo, childInfo...)
+			}
+		}
+	} else {
+		log.Warn("First child of container is not an app but another container - this might cause layout issues")
+
+		childInfo, err := processContainers(
+			workspaceName,
+			container.Split,
+			container.Containers,
+			depth+1,
+		)
+
+		if err != nil {
+			log.Error("Failed to process child containers: %v", err)
+		} else {
+			resizeInfo = append(resizeInfo, childInfo...)
+		}
+	}
+
+	return resizeInfo, newContainerID, nil
+}
+
+// Sets up a container by creating its first app and setting the layout
+func setupContainerWithApp(
+	workspaceName string,
+	parentLayout string,
+	container config.Container,
+	firstChild config.Container,
+	depth int,
+	containerID int,
+	containerMark string,
+) ([]AppInfo, error) {
+	var resizeInfo []AppInfo
+
+	firstAppMark := generateAppMark(workspaceName, depth+1, containerID, 0)
+
+	app := config.Container{
+		App:   firstChild.App,
+		Cmd:   firstChild.Cmd,
+		Size:  firstChild.Size,
+		Delay: firstChild.Delay,
+		Post:  firstChild.Post,
+	}
+
+	if err := LaunchApp(app, firstAppMark); err != nil {
+		return nil, fmt.Errorf("failed to launch container's first app: %w", err)
+	}
+
+	if err := ApplyMark(containerMark); err != nil {
+		log.Warn("Failed to apply container mark: %v", err)
+	}
+
+	if err := setContainerLayout(container.Split); err != nil {
+		log.Warn("Failed to set container layout: %v", err)
+	}
+
+	if container.Size != "" {
+		resizeInfo = append(resizeInfo, AppInfo{
+			Mark:   containerMark,
+			Size:   container.Size,
+			Layout: parentLayout,
+		})
+	}
+
+	if firstChild.Size != "" {
+		resizeInfo = append(resizeInfo, AppInfo{
+			Mark:   firstAppMark,
+			Size:   firstChild.Size,
+			Layout: container.Split,
+		})
+	}
+
+	return resizeInfo, nil
+}
+
+// Applies the specified layout to the current container
+func setContainerLayout(layoutType string) error {
+	splitCmd := fmt.Sprintf("split %s", layoutType)
+	_, err := RunCommand(splitCmd)
+	return err
 }

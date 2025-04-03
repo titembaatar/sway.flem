@@ -25,25 +25,10 @@ func LaunchApp(app config.Container, mark string) error {
 		cmdStr = app.App
 	}
 
-	parts := strings.Fields(cmdStr)
-	if len(parts) == 0 {
-		return fmt.Errorf("empty command")
-	}
-
-	var cmd *exec.Cmd
-	if len(parts) == 1 {
-		cmd = exec.Command(parts[0])
-	} else {
-		cmd = exec.Command(parts[0], parts[1:]...)
-	}
-
-	log.Debug("Executing command: %s", cmdStr)
-	if err := cmd.Start(); err != nil {
-		log.Error("Failed to start application: %v", err)
+	if err := executeCommand(cmdStr); err != nil {
 		return fmt.Errorf("failed to start application: %w", err)
 	}
 
-	// Give the application some time to launch
 	if app.Delay != 0 {
 		time.Sleep(time.Duration(app.Delay) * time.Second)
 	} else {
@@ -56,11 +41,9 @@ func LaunchApp(app config.Container, mark string) error {
 		return fmt.Errorf("failed to apply mark to application: %w", err)
 	}
 
-	// Execute post-launch commands if any
 	if len(app.Post) > 0 {
 		if err := RunPostCmd(app.Post); err != nil {
 			log.Warn("Some post-launch commands failed: %v", err)
-			// Continue execution even if post commands fail
 		}
 	}
 
@@ -79,20 +62,7 @@ func RunPostCmd(commands []string) error {
 	for i, cmdStr := range commands {
 		log.Debug("Executing post-launch command %d: %s", i+1, cmdStr)
 
-		parts := strings.Fields(cmdStr)
-		if len(parts) == 0 {
-			errors = append(errors, fmt.Sprintf("command %d: empty command", i+1))
-			continue
-		}
-
-		var cmd *exec.Cmd
-		if len(parts) == 1 {
-			cmd = exec.Command(parts[0])
-		} else {
-			cmd = exec.Command(parts[0], parts[1:]...)
-		}
-
-		err := cmd.Start()
+		err := executeCommand(cmdStr)
 		if err != nil {
 			log.Error("Failed to execute post-launch command %d: %v", i+1, err)
 			errors = append(errors, fmt.Sprintf("command %d: %v", i+1, err))
@@ -108,6 +78,24 @@ func RunPostCmd(commands []string) error {
 
 	log.Info("All post-launch commands executed successfully")
 	return nil
+}
+
+// Parses and executes a command string
+func executeCommand(cmdStr string) error {
+	parts := strings.Fields(cmdStr)
+	if len(parts) == 0 {
+		return fmt.Errorf("empty command")
+	}
+
+	var cmd *exec.Cmd
+	if len(parts) == 1 {
+		cmd = exec.Command(parts[0])
+	} else {
+		cmd = exec.Command(parts[0], parts[1:]...)
+	}
+
+	log.Debug("Executing command: %s", cmdStr)
+	return cmd.Start()
 }
 
 // Resizes a list of applications according to their stored information
@@ -133,19 +121,16 @@ func ResizeApps(appInfos []AppInfo) {
 func ResizeMark(mark string, size string, layout string) error {
 	var dimension string
 
-	// Determine resize dimension based on layout
 	switch layout {
 	case "splith", "tabbed", "h", "t", "horizontal":
 		dimension = "width"
 	case "splitv", "stacking", "v", "s", "vertical":
 		dimension = "height"
 	default:
-		// Default to width for unknown layouts
 		dimension = "width"
 		log.Warn("Unknown layout for resizing: %s, defaulting to width", layout)
 	}
 
-	// Use criteria to focus and resize
 	focusCmd := fmt.Sprintf("[con_mark=\"%s\"] focus", mark)
 	resizeCmd := fmt.Sprintf("resize set %s %s", dimension, size)
 	_, errFocus := RunCommand(focusCmd)

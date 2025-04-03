@@ -10,40 +10,29 @@ import (
 	"github.com/titembaatar/sway.flem/internal/sway"
 )
 
-// Setup initializes and configures the Sway environment based on the configuration
+// Initializes and configures the Sway environment based on the configuration
 func Setup(config *config.Config) error {
 	log.Info("Starting environment setup")
 
-	// Check if swaymsg is available
-	if err := checkDependencies(); err != nil {
+	if err := validateEnvironment(); err != nil {
 		return err
 	}
 
-	// Initialize the environment
-	startTime := time.Now()
-	if err := sway.SetupEnvironment(config); err != nil {
-		return fmt.Errorf("failed to setup environment: %w", err)
+	if err := executeSetup(config); err != nil {
+		return err
 	}
 
-	elapsed := time.Since(startTime)
-	log.Info("Environment setup completed in %.2f seconds", elapsed.Seconds())
-
-	if len(config.Focus) > 0 {
-		log.Info("Focusing on specified workspaces")
-		if err := sway.FocusWorkspaces(config.Focus); err != nil {
-			log.Warn("Failed to focus on some workspaces: %v", err)
-			// Continue even if focusing fails
-		}
+	if err := focusRequestedWorkspaces(config); err != nil {
+		log.Warn("Some workspace focusing operations failed: %v", err)
 	}
 
 	return nil
 }
 
-// checkDependencies verifies that all required external dependencies are available
-func checkDependencies() error {
-	log.Debug("Checking dependencies")
+// Verifies that all required external dependencies are available
+func validateEnvironment() error {
+	log.Debug("Validating environment and dependencies")
 
-	// Check if swaymsg is available
 	if err := checkCommand("swaymsg"); err != nil {
 		return fmt.Errorf("swaymsg not found: %w", err)
 	}
@@ -52,11 +41,36 @@ func checkDependencies() error {
 	return nil
 }
 
-// checkCommand checks if a command is available in the PATH
+// Execute the environment setup
+func executeSetup(config *config.Config) error {
+	log.Info("Configuring Sway environment")
+
+	startTime := time.Now()
+
+	if err := sway.SetupEnvironment(config); err != nil {
+		return fmt.Errorf("failed to setup environment: %w", err)
+	}
+
+	elapsed := time.Since(startTime)
+	log.Info("Environment setup completed in %.2f seconds", elapsed.Seconds())
+
+	return nil
+}
+
+// Focus on workspaces specified in the config
+func focusRequestedWorkspaces(config *config.Config) error {
+	if len(config.Focus) == 0 {
+		return nil
+	}
+
+	log.Info("Focusing on specified workspaces: %v", config.Focus)
+	return sway.FocusWorkspaces(config.Focus)
+}
+
+// Checks if a command is available in the PATH
 func checkCommand(command string) error {
 	log.Debug("Checking if %s is available", command)
 
-	// Try to run the command with -v flag to check version
 	cmd := exec.Command(command, "-v")
 	output, err := cmd.CombinedOutput()
 

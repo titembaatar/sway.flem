@@ -16,11 +16,41 @@ type CommandResponse struct {
 	Error   string `json:"error,omitempty"`
 }
 
+type SwayCommandOptions struct {
+	Type           string // command, get_workspaces, get_marks, etc.
+	Raw            bool   // Whether to use -r flag for raw output
+	ExpectJSON     bool   // Whether the response is expected to be JSON
+	ErrorsNonFatal bool   // Whether errors should be treated as non-fatal
+}
+
+func DefaultCommandOptions() SwayCommandOptions {
+	return SwayCommandOptions{
+		Type:           "command",
+		Raw:            false,
+		ExpectJSON:     true,
+		ErrorsNonFatal: false,
+	}
+}
+
 // Executes a swaymsg command and returns the result
 func RunCommand(command string) ([]CommandResponse, error) {
 	log.Debug("Executing sway command: %s", command)
 
-	cmd := exec.Command("swaymsg", "-t", "command", "--", command)
+	opts := DefaultCommandOptions()
+	return executeSwaymsg(command, opts)
+}
+
+func executeSwaymsg(command string, opts SwayCommandOptions) ([]CommandResponse, error) {
+	args := []string{"-t", opts.Type}
+
+	if opts.Raw {
+		args = append(args, "-r")
+	}
+
+	// Add -- to prevent swaymsg from interpreting args
+	args = append(args, "--", command)
+
+	cmd := exec.Command("swaymsg", args...)
 
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
@@ -36,6 +66,11 @@ func RunCommand(command string) ([]CommandResponse, error) {
 		return nil, fmt.Errorf("swaymsg error: %w: %s", err, errMsg)
 	}
 
+	// If we don't expect JSON, just return empty response
+	if !opts.ExpectJSON {
+		return []CommandResponse{{Success: true}}, nil
+	}
+
 	// Parse the JSON response
 	var responses []CommandResponse
 	if err := json.Unmarshal(stdout.Bytes(), &responses); err != nil {
@@ -46,7 +81,7 @@ func RunCommand(command string) ([]CommandResponse, error) {
 
 	// Check for command success
 	for i, resp := range responses {
-		if !resp.Success {
+		if !resp.Success && !opts.ErrorsNonFatal {
 			log.Error("Sway command failed: %s", resp.Error)
 			return responses, fmt.Errorf("sway command failed: %s", resp.Error)
 		}
@@ -56,11 +91,13 @@ func RunCommand(command string) ([]CommandResponse, error) {
 	return responses, nil
 }
 
-// Retrieves the list of workspaces from sway
-func GetWorkspaces() ([]string, error) {
-	log.Debug("Getting workspaces from sway")
+func executeSwayGetJSON(command string, outputType string, v interface{}) error {
+	args := []string{"-t", outputType, "-r"}
+	if command != "" {
+		args = append(args, "--", command)
+	}
 
-	cmd := exec.Command("swaymsg", "-t", "get_workspaces", "-r")
+	cmd := exec.Command("swaymsg", args...)
 
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
@@ -69,22 +106,32 @@ func GetWorkspaces() ([]string, error) {
 	err := cmd.Run()
 	if err != nil {
 		errMsg := stderr.String()
-		log.Error("Failed to get workspaces: %v", err)
+		log.Error("Failed to execute sway %s command: %v", outputType, err)
 		if errMsg != "" {
 			log.Error("Stderr: %s", errMsg)
 		}
-		return nil, fmt.Errorf("swaymsg error: %w: %s", err, errMsg)
+		return fmt.Errorf("swaymsg error: %w: %s", err, errMsg)
 	}
+
+	if err := json.Unmarshal(stdout.Bytes(), v); err != nil {
+		log.Error("Failed to parse response: %v", err)
+		log.Debug("Raw response: %s", stdout.String())
+		return fmt.Errorf("failed to parse response: %w", err)
+	}
+
+	return nil
+}
+
+func GetWorkspaces() ([]string, error) {
+	log.Debug("Getting workspaces from sway")
 
 	type workspace struct {
 		Name string `json:"name"`
 	}
 
 	var workspaces []workspace
-	if err := json.Unmarshal(stdout.Bytes(), &workspaces); err != nil {
-		log.Error("Failed to parse workspace response: %v", err)
-		log.Debug("Raw response: %s", stdout.String())
-		return nil, fmt.Errorf("failed to parse workspace response: %w", err)
+	if err := executeSwayGetJSON("", "get_workspaces", &workspaces); err != nil {
+		return nil, err
 	}
 
 	names := make([]string, len(workspaces))
@@ -96,14 +143,12 @@ func GetWorkspaces() ([]string, error) {
 	return names, nil
 }
 
-// Switches to the specified workspace
 func SwitchToWorkspace(workspace string) error {
 	command := fmt.Sprintf("workspace %s", workspace)
 	_, err := RunCommand(command)
 	return err
 }
 
-// Creates a new workspace with the specified name and layout
 func CreateWorkspace(name string, layout string) error {
 	if err := SwitchToWorkspace(name); err != nil {
 		return err
@@ -114,7 +159,12 @@ func CreateWorkspace(name string, layout string) error {
 	return err
 }
 
-// Switches focus to each of the specified workspaces in order.
+func FocusByMark(mark string) error {
+	command := fmt.Sprintf("[con_mark=\"%s\"] focus", mark)
+	_, err := RunCommand(command)
+	return err
+}
+
 func FocusWorkspaces(workspaces []string) error {
 	log.Info("Focusing on %d workspaces", len(workspaces))
 	var errors []string
