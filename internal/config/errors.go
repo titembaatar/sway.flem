@@ -12,6 +12,7 @@ var (
 	ErrNoContainers              = errors.New("workspace has no containers defined")
 	ErrMissingSplit              = errors.New("nested container has no split defined")
 	ErrInvalidContainerStructure = errors.New("invalid container structure: must be either an app or have nested containers")
+	ErrInvalidSizeFormat         = errors.New("invalid size format: must be a number, optionally followed by 'ppt' or 'px' (e.g., '50', '50ppt', '800px')")
 )
 
 type ConfigError struct {

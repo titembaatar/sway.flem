@@ -2,6 +2,8 @@ package config
 
 import (
 	"fmt"
+	"regexp"
+	"strconv"
 
 	"github.com/titembaatar/sway.flem/internal/log"
 )
@@ -24,11 +26,44 @@ var validLayoutTypes = map[string]string{
 	"t":          "tabbed",
 }
 
+// Regular expression for valid size formats:
+// - Digits only (e.g., "50") - defaults to ppt in Sway
+// - Digits followed by "ppt" (e.g., "50ppt")
+// - Digits followed by "px" (e.g., "800px")
+var sizeRegex = regexp.MustCompile(`^(\d+)(ppt|px)?$`)
+
 func NormalizeLayoutType(layoutType string) (string, error) {
 	if normalized, ok := validLayoutTypes[layoutType]; ok {
 		return normalized, nil
 	}
 	return "", ErrInvalidLayoutType
+}
+
+func ValidateSize(size string) error {
+	if size == "" {
+		return nil
+	}
+
+	if !sizeRegex.MatchString(size) {
+		return ErrInvalidSizeFormat
+	}
+
+	matches := sizeRegex.FindStringSubmatch(size)
+	if len(matches) < 2 {
+		return ErrInvalidSizeFormat
+	}
+
+	numStr := matches[1]
+	num, err := strconv.Atoi(numStr)
+	if err != nil {
+		return ErrInvalidSizeFormat
+	}
+
+	if num < 0 {
+		return ErrInvalidSizeFormat
+	}
+
+	return nil
 }
 
 func ValidateConfig(config *Config) error {
@@ -89,6 +124,13 @@ func validateContainer(workspaceName string, container Container, context string
 	// A container must be either an app or have nested containers, not neither
 	if !isApp && !isNestedContainer {
 		return NewConfigError(ErrInvalidContainerStructure, workspaceName, context, -1)
+	}
+
+	// Validate the size format if specified
+	if container.Size != "" {
+		if err := ValidateSize(container.Size); err != nil {
+			return NewConfigError(err, workspaceName, fmt.Sprintf("%s.size", context), -1)
+		}
 	}
 
 	// If this is a nested container, validate split and nested containers
