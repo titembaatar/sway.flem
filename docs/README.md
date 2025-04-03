@@ -1,38 +1,16 @@
 # sway.flem Documentation
 
-## 📚 Documentation Sections
+## 📚 Table of Contents
 
-### 1. 🚀 Getting Started
-- [Installation and Setup](cli.md)
-- [Basic Configuration](configuration.md)
-
-### 2. 🔧 Configuration Guide
-- [Configuration Reference](configuration.md)
-  - Workspace Layouts
-  - Container Management
-  - Advanced Configuration Options
-
-### 3. 📋 Command Line Interface
-- [CLI Options and Usage](cli.md)
-  - Command Line Arguments
-  - Logging and Debugging
-  - Workflow Optimization
-
-### 4. 🎨 Examples and Use Cases
-- [Configuration Examples](examples.md)
-  - Development Environments
-  - Multimedia Workspaces
-  - Multi-Monitor Setups
-
-### 5. 🛠️ Troubleshooting
-- [Common Issues and Solutions](troubleshooting.md)
-  - Debugging Techniques
-  - Error Resolution
-  - Performance Optimization
+1. [Installation and Setup](cli.md)
+2. [Configuration Reference](configuration.md)
+3. [Command Line Options](cli.md)
+4. [Configuration Examples](examples.md)
+5. [Troubleshooting](troubleshooting.md)
 
 ## 💡 Quick Links
 
-- [Main Project README](../README.md)
+- [Project README](../README.md)
 - [GitHub Repository](https://github.com/titembaatar/sway.flem)
 - [Issue Tracker](https://github.com/titembaatar/sway.flem/issues)
 
@@ -42,9 +20,7 @@ Found an issue in the documentation? Want to improve it?
 
 1. Check the [Contributing Guidelines](../CONTRIBUTING.md)
 2. Submit a Pull Request
-3. Help make sway.flem better for everyone!
-
-## 📧 Support
+3. Help make sway.flem better !
 
 If you encounter any problems or have questions:
 - Open an [Issue on GitHub](https://github.com/titembaatar/sway.flem/issues)
