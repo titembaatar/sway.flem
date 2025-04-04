@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"os/exec"
 	"strings"
-	"time"
 
 	"github.com/titembaatar/sway.flem/internal/log"
 )
@@ -16,17 +15,17 @@ type CommandResponse struct {
 	Error   string `json:"error,omitempty"`
 }
 
-// Options for executing sway commands
-type SwayCommandOptions struct {
-	Type           string // command, get_workspaces, get_marks, etc.
+type SwayCmd struct {
+	Command        string // The command to execute
+	Type           string // Command type: command, get_workspaces, get_marks, etc.
 	Raw            bool   // Whether to use -r flag for raw output
 	ExpectJSON     bool   // Whether the response is expected to be JSON
 	ErrorsNonFatal bool   // Whether errors should be treated as non-fatal
 }
 
-// Returns standard options for regular sway commands
-func DefaultCommandOptions() SwayCommandOptions {
-	return SwayCommandOptions{
+func NewSwayCmd(command string) *SwayCmd {
+	return &SwayCmd{
+		Command:        command,
 		Type:           "command",
 		Raw:            false,
 		ExpectJSON:     true,
@@ -34,29 +33,53 @@ func DefaultCommandOptions() SwayCommandOptions {
 	}
 }
 
-// Executes a swaymsg command and returns the result
-func RunCommand(command string) ([]CommandResponse, error) {
-	log.SetComponent(log.ComponentSway)
-
-	log.Debug("Executing sway command: %s", command)
-
-	opts := DefaultCommandOptions()
-	return executeSwaymsg(command, opts)
+func NewSwayCmdType(command string, cmdType string) *SwayCmd {
+	cmd := NewSwayCmd(command)
+	cmd.Type = cmdType
+	return cmd
 }
 
-// Helper for executing swaymsg commands
-func executeSwaymsg(command string, opts SwayCommandOptions) ([]CommandResponse, error) {
-	cmdOp := log.Operation(fmt.Sprintf("sway command '%s'", command))
+func NewRawSwayCmd(command string, cmdType string) *SwayCmd {
+	cmd := NewSwayCmdType(command, cmdType)
+	cmd.Raw = true
+	return cmd
+}
+
+func (c *SwayCmd) WithType(cmdType string) *SwayCmd {
+	c.Type = cmdType
+	return c
+}
+
+func (c *SwayCmd) WithRaw(raw bool) *SwayCmd {
+	c.Raw = raw
+	return c
+}
+
+func (c *SwayCmd) WithExpectJSON(expectJSON bool) *SwayCmd {
+	c.ExpectJSON = expectJSON
+	return c
+}
+
+func (c *SwayCmd) WithErrorsNonFatal(nonFatal bool) *SwayCmd {
+	c.ErrorsNonFatal = nonFatal
+	return c
+}
+
+func (c *SwayCmd) Run() ([]CommandResponse, error) {
+	log.SetComponent(log.ComponentSway)
+	log.Debug("Executing sway command: %s", c.Command)
+
+	cmdOp := log.Operation(fmt.Sprintf("sway command '%s'", c.Command))
 	cmdOp.Begin()
 
-	args := []string{"-t", opts.Type}
+	args := []string{"-t", c.Type}
 
-	if opts.Raw {
+	if c.Raw {
 		args = append(args, "-r")
 	}
 
 	// Add -- to prevent swaymsg from interpreting args
-	args = append(args, "--", command)
+	args = append(args, "--", c.Command)
 
 	log.Debug("Full swaymsg command: swaymsg %s", strings.Join(args, " "))
 	cmd := exec.Command("swaymsg", args...)
@@ -68,16 +91,16 @@ func executeSwaymsg(command string, opts SwayCommandOptions) ([]CommandResponse,
 	err := cmd.Run()
 	if err != nil {
 		errMsg := stderr.String()
-		log.Error("Failed to execute sway command '%s': %v", command, err)
+		log.Error("Failed to execute sway command '%s': %v", c.Command, err)
 		if errMsg != "" {
 			log.Error("Command stderr: %s", errMsg)
 		}
 		cmdOp.EndWithError(err)
-		return nil, NewSwayCommandError(command, err, errMsg)
+		return nil, NewSwayCommandError(c.Command, err, errMsg)
 	}
 
 	// If we don't expect JSON, just return empty response
-	if !opts.ExpectJSON {
+	if !c.ExpectJSON {
 		cmdOp.End()
 		return []CommandResponse{{Success: true}}, nil
 	}
@@ -85,7 +108,7 @@ func executeSwaymsg(command string, opts SwayCommandOptions) ([]CommandResponse,
 	// Parse the JSON response
 	var responses []CommandResponse
 	if err := json.Unmarshal(stdout.Bytes(), &responses); err != nil {
-		log.Error("Failed to parse response for command '%s': %v", command, err)
+		log.Error("Failed to parse response for command '%s': %v", c.Command, err)
 		log.Debug("Raw response: %s", stdout.String())
 		cmdOp.EndWithError(err)
 		return nil, fmt.Errorf("failed to parse sway command response: %w", err)
@@ -93,8 +116,8 @@ func executeSwaymsg(command string, opts SwayCommandOptions) ([]CommandResponse,
 
 	// Check for command success
 	for i, resp := range responses {
-		if !resp.Success && !opts.ErrorsNonFatal {
-			log.Error("Sway command '%s' failed: %s", command, resp.Error)
+		if !resp.Success && !c.ErrorsNonFatal {
+			log.Error("Sway command '%s' failed: %s", c.Command, resp.Error)
 			cmdErr := fmt.Errorf("sway command failed: %s", resp.Error)
 			cmdOp.EndWithError(cmdErr)
 			return responses, cmdErr
@@ -102,20 +125,15 @@ func executeSwaymsg(command string, opts SwayCommandOptions) ([]CommandResponse,
 		log.Debug("Command response %d: success=%v", i, resp.Success)
 	}
 
-	log.Debug("Successfully executed sway command '%s'", command)
+	log.Debug("Successfully executed sway command '%s'", c.Command)
 	cmdOp.End()
 	return responses, nil
 }
 
-// Helper for sway commands that return JSON data
-func executeSwayGetJSON(command string, outputType string, v any) error {
-	// Always use raw output for JSON commands
-	args := []string{"-t", outputType, "-r"}
-	if command != "" {
-		args = append(args, "--", command)
-	}
+func (c *SwayCmd) GetJSON(v interface{}) error {
+	c.Raw = true
 
-	cmd := exec.Command("swaymsg", args...)
+	cmd := exec.Command("swaymsg", "-t", c.Type, "-r", "--", c.Command)
 
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
@@ -124,7 +142,7 @@ func executeSwayGetJSON(command string, outputType string, v any) error {
 	err := cmd.Run()
 	if err != nil {
 		errMsg := stderr.String()
-		log.Error("Failed to execute sway %s command: %v", outputType, err)
+		log.Error("Failed to execute sway %s command: %v", c.Type, err)
 		if errMsg != "" {
 			log.Error("Stderr: %s", errMsg)
 		}
@@ -135,76 +153,6 @@ func executeSwayGetJSON(command string, outputType string, v any) error {
 		log.Error("Failed to parse response: %v", err)
 		log.Debug("Raw response: %s", stdout.String())
 		return fmt.Errorf("failed to parse response: %w", err)
-	}
-
-	return nil
-}
-
-// Retrieves the list of workspaces from sway
-func GetWorkspaces() ([]string, error) {
-	log.Debug("Getting workspaces from sway")
-
-	type workspace struct {
-		Name string `json:"name"`
-	}
-
-	var workspaces []workspace
-	if err := executeSwayGetJSON("", "get_workspaces", &workspaces); err != nil {
-		return nil, err
-	}
-
-	names := make([]string, len(workspaces))
-	for i, ws := range workspaces {
-		names[i] = ws.Name
-	}
-
-	log.Debug("Found %d workspaces: %s", len(names), strings.Join(names, ", "))
-	return names, nil
-}
-
-// Switches to the specified workspace
-func SwitchToWorkspace(workspace string) error {
-	command := fmt.Sprintf("workspace %s", workspace)
-	_, err := RunCommand(command)
-	return err
-}
-
-// Creates a new workspace with the specified name and layout
-func CreateWorkspace(name string, layout string) error {
-	if err := SwitchToWorkspace(name); err != nil {
-		return fmt.Errorf("%w: failed to switch to workspace '%s': %v",
-			ErrWorkspaceCreateFailed, name, err)
-	}
-
-	command := fmt.Sprintf("layout %s", layout)
-	_, err := RunCommand(command)
-	if err != nil {
-		return fmt.Errorf("%w: failed to set layout '%s' for workspace '%s': %v",
-			ErrWorkspaceCreateFailed, layout, name, err)
-	}
-
-	log.Info("Successfully created workspace '%s' with layout '%s'", name, layout)
-	return nil
-}
-
-// Switches focus to each of the specified workspaces in order.
-func FocusWorkspaces(workspaces []string) error {
-	log.Info("Focusing on %d workspaces", len(workspaces))
-	var errors []string
-
-	for i, workspace := range workspaces {
-		log.Debug("Focusing on workspace: %s", workspace)
-		if err := SwitchToWorkspace(workspace); err != nil {
-			log.Error("Failed to focus on workspace %s: %v", workspace, err)
-			errors = append(errors, fmt.Sprintf("workspace %s: %v", workspace, err))
-		} else {
-			log.Info("Successfully focused on workspace %s (%d of %d)", workspace, i+1, len(workspaces))
-			time.Sleep(100 * time.Millisecond)
-		}
-	}
-
-	if len(errors) > 0 {
-		return fmt.Errorf("failed to focus on some workspaces: %s", strings.Join(errors, "; "))
 	}
 
 	return nil

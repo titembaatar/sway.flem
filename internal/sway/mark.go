@@ -18,6 +18,10 @@ type Mark struct {
 	ID string
 }
 
+func (m Mark) String() string {
+	return m.ID
+}
+
 func NewMark(id string) Mark {
 	return Mark{ID: id}
 }
@@ -31,37 +35,31 @@ func NewContainerMark(workspaceName string, containerID int) Mark {
 	return Mark{ID: fmt.Sprintf("w%s_c%d", workspaceName, containerID)}
 }
 
-// String representation of the mark
-func (m Mark) String() string {
-	return m.ID
-}
-
-// Focus a container with this mark
-func (m Mark) FocusCmd() string {
-	return fmt.Sprintf("[con_mark=\"%s\"] focus", m.ID)
-}
-
-// Focuses the container with this mark
 func (m Mark) Focus() error {
 	log.Debug("Focusing container with mark '%s'", m.ID)
-	_, err := RunCommand(m.FocusCmd())
+
+	cmd := fmt.Sprintf("[con_mark=\"%s\"] focus", m.ID)
+	swayCmd := NewSwayCmd(cmd)
+
+	_, err := swayCmd.Run()
+
 	if err != nil {
 		return fmt.Errorf("failed to focus container with mark '%s': %w", m.ID, err)
 	}
+
 	return nil
 }
 
-// Resize a container with this mark
-func (m Mark) ResizeCmd(dimension string, size string) string {
-	return fmt.Sprintf("resize set %s %s", dimension, size)
+func (m Mark) Resize(width string, height string) string {
+	return fmt.Sprintf("resize set %s %s", width, height)
 }
 
-// Applies the mark to the currently focused container
 func (m Mark) Apply() error {
 	log.Debug("Applying mark '%s' to focused container", m.ID)
-	command := fmt.Sprintf("mark --add %s", m.ID)
+	cmd := fmt.Sprintf("mark --add %s", m.ID)
+	swayCmd := NewSwayCmd(cmd)
 
-	_, err := RunCommand(command)
+	_, err := swayCmd.Run()
 	if err != nil {
 		return NewMarkError(m.ID, fmt.Errorf("%w: %v", ErrMarkingFailed, err))
 	}

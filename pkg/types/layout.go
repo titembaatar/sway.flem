@@ -68,7 +68,7 @@ func (l LayoutType) SplitCommand() string {
 }
 
 // Dimension to use for resizing with this layout
-func (l LayoutType) ResizeDimension() string {
+func (l LayoutType) Orientation() string {
 	switch l {
 	case LayoutHorizontal, LayoutTabbed:
 		return "width"

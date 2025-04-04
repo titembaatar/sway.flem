@@ -119,29 +119,33 @@ func (a *App) RunPost() error {
 func (a *App) Resize() error {
 	if a.Size == "" {
 		log.Debug("Skipping resize for mark '%s' (no size specified)", a.Mark.String())
+
 		return nil
 	}
 
-	dimension := getOrientationForLayout(a.Layout)
+	orientation := getOrientation(a.Layout)
 	log.Debug("Resizing mark '%s' to '%s' with layout '%s'", a.Mark.String(), a.Size, a.Layout)
 
 	if err := a.Mark.Focus(); err != nil {
-		return NewResizeError(a.Mark.String(), a.Size, dimension, a.Layout,
+		return NewResizeError(a.Mark.String(), a.Size, orientation, a.Layout,
 			fmt.Errorf("%w: failed to focus container before resizing", ErrFocusFailed))
 	}
 
 	time.Sleep(100 * time.Millisecond)
 
-	resizeCmd := a.Mark.ResizeCmd(dimension, a.Size)
-	if _, err := RunCommand(resizeCmd); err != nil {
+	resizeCmd := NewSwayCmd(a.Mark.Resize(orientation, a.Size))
+
+	if _, err := resizeCmd.Run(); err != nil {
 		log.Error("Failed to resize container with mark '%s' to %s %s: %v",
-			a.Mark.String(), a.Size, dimension, err)
-		return NewResizeError(a.Mark.String(), a.Size, dimension, a.Layout,
+			a.Mark.String(), a.Size, orientation, err)
+
+		return NewResizeError(a.Mark.String(), a.Size, orientation, a.Layout,
 			fmt.Errorf("%w: command failed", ErrResizeFailed))
 	}
 
 	time.Sleep(100 * time.Millisecond)
-	log.Debug("Successfully resized container with mark '%s' to %s %s", a.Mark.String(), a.Size, dimension)
+
+	log.Debug("Successfully resized container with mark '%s' to %s %s", a.Mark.String(), a.Size, orientation)
 
 	return nil
 }
@@ -210,12 +214,12 @@ func validateCommand(command string) error {
 	return nil
 }
 
-func getOrientationForLayout(layout string) string {
+func getOrientation(layout string) string {
 	layoutType, err := types.ParseLayoutType(layout)
 	if err != nil {
 		log.Warn("Unknown layout for resizing: %s, defaulting to width", layout)
 		return "width"
 	}
 
-	return layoutType.ResizeDimension()
+	return layoutType.Orientation()
 }

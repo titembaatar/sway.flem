@@ -27,10 +27,9 @@ func SetupEnvironment(cfg *config.Config) error {
 
 func SetupWorkspace(workspaceName string, workspace config.Workspace) error {
 	log.Info("Setting up workspace: %s", workspaceName)
+	ws := NewWorkspace(workspaceName, workspace.Layout.String())
 
-	if err := CreateWorkspace(workspaceName, workspace.Layout.String()); err != nil {
-		return fmt.Errorf("failed to create workspace: %w", err)
-	}
+	ws.Create()
 
 	var apps []App
 
@@ -197,9 +196,8 @@ func setContainerLayout(layoutType string) error {
 	}
 
 	for _, command := range commands {
-		if _, err := RunCommand(command); err != nil {
-			return err
-		}
+		cmd := NewSwayCmd(command)
+		cmd.Run()
 	}
 
 	return nil

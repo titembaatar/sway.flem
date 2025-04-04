@@ -44,10 +44,8 @@ func GetAllWindows() ([]WindowInfo, error) {
 	log.Debug("Retrieving all windows from Sway tree")
 
 	var root Node
-	err := executeSwayGetJSON("", "get_tree", &root)
-	if err != nil {
-		return nil, err
-	}
+	swayCmd := NewSwayCmdType("", "get_tree")
+	swayCmd.GetJSON(&root)
 
 	windows := collectWindows(root)
 	log.Debug("Found %d windows in Sway tree", len(windows))

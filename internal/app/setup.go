@@ -85,15 +85,14 @@ func focusRequestedWorkspaces(config *config.Config) error {
 	focusOp.Begin()
 
 	log.Info("Focusing on %d specified workspaces: %v", len(config.Focus), config.Focus)
-	err := sway.FocusWorkspaces(config.Focus)
-
-	if err != nil {
-		focusOp.EndWithError(err)
-	} else {
-		focusOp.End()
+	for _, focus := range config.Focus {
+		workspace := sway.NewWorkspace(focus, "")
+		workspace.Switch()
 	}
 
-	return err
+	focusOp.End()
+
+	return nil
 }
 
 // Checks if a command is available in the PATH
