@@ -2,7 +2,6 @@ package sway
 
 import (
 	"slices"
-	"strings"
 
 	"github.com/titembaatar/sway.flem/internal/log"
 )
