@@ -187,13 +187,6 @@ func CreateWorkspace(name string, layout string) error {
 	return nil
 }
 
-// Focuses a container with the specified mark
-func FocusByMark(mark string) error {
-	command := fmt.Sprintf("[con_mark=\"%s\"] focus", mark)
-	_, err := RunCommand(command)
-	return err
-}
-
 // Switches focus to each of the specified workspaces in order.
 func FocusWorkspaces(workspaces []string) error {
 	log.Info("Focusing on %d workspaces", len(workspaces))

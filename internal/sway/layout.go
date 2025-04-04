@@ -32,15 +32,17 @@ func SetupWorkspace(workspaceName string, workspace config.Workspace) error {
 		return fmt.Errorf("failed to create workspace: %w", err)
 	}
 
-	var resizeInfo []AppInfo
+	var apps []App
 
 	info, err := setupContainer(workspaceName, workspace.Containers, workspace.Layout.String(), 0, 0)
 	if err != nil {
 		log.Error("Failed to setup container in workspace %s: %v", workspaceName, err)
 	}
-	resizeInfo = append(resizeInfo, info...)
+	apps = append(apps, info...)
 
-	ResizeApps(resizeInfo)
+	for _, app := range apps {
+		app.Resize()
+	}
 
 	log.Info("Workspace %s setup complete", workspaceName)
 	return nil
@@ -52,11 +54,11 @@ func setupContainer(
 	parentLayout string,
 	containerID int,
 	appID int,
-) ([]AppInfo, error) {
-	var resizeInfo []AppInfo
+) ([]App, error) {
+	var apps []App
 
 	if len(containers) == 0 {
-		return resizeInfo, nil
+		return apps, nil
 	}
 
 	if containers[0].App == "" && len(containers[0].Containers) > 0 {
@@ -71,22 +73,27 @@ func setupContainer(
 			log.Error("Failed to setup nested container %d in workspace %s: %v",
 				containerID+1, workspaceName, err)
 		}
-		resizeInfo = append(resizeInfo, sizeInfo...)
+		apps = append(apps, sizeInfo...)
 	}
 
 	appMark := NewAppMark(workspaceName, containerID, appID)
 	conMark := NewContainerMark(workspaceName, containerID)
 
-	if containers[0].Size != "" {
-		appSizeInfo := AppInfo{
-			Mark:   appMark.String(),
-			Size:   containers[0].Size,
-			Layout: parentLayout,
-		}
-		resizeInfo = append(resizeInfo, appSizeInfo)
+	app := App{
+		Name:    containers[0].App,
+		Command: containers[0].Cmd,
+		Mark:    appMark,
+		Size:    containers[0].Size,
+		Delay:   containers[0].Delay,
+		Layout:  parentLayout,
+		Post:    containers[0].Post,
 	}
 
-	if err := LaunchApp(containers[0], appMark.String()); err != nil {
+	if containers[0].Size != "" {
+		apps = append(apps, app)
+	}
+
+	if err := app.Launch(); err != nil {
 		log.Error("Failed to launch application %s in workspace %s: %v",
 			containers[0].App,
 			workspaceName,
@@ -116,10 +123,10 @@ func setupContainer(
 				workspaceName,
 				err)
 		}
-		resizeInfo = append(resizeInfo, info...)
+		apps = append(apps, info...)
 	}
 
-	return resizeInfo, nil
+	return apps, nil
 }
 
 func processContainer(
@@ -127,23 +134,28 @@ func processContainer(
 	containers []config.Container,
 	layout string,
 	containerID int,
-) ([]AppInfo, error) {
-	var resizeInfo []AppInfo
+) ([]App, error) {
+	var apps []App
 
 	for i, container := range containers {
 		if container.App != "" {
 			appMark := NewAppMark(workspaceName, containerID, i+1)
 
-			if container.Size != "" {
-				appSizeInfo := AppInfo{
-					Mark:   appMark.String(),
-					Size:   container.Size,
-					Layout: layout,
-				}
-				resizeInfo = append(resizeInfo, appSizeInfo)
+			app := App{
+				Name:    containers[0].App,
+				Command: containers[0].Cmd,
+				Mark:    appMark,
+				Size:    containers[0].Size,
+				Delay:   containers[0].Delay,
+				Layout:  layout,
+				Post:    containers[0].Post,
 			}
 
-			if err := LaunchApp(container, appMark.String()); err != nil {
+			if container.Size != "" {
+				apps = append(apps, app)
+			}
+
+			if err := app.Launch(); err != nil {
 				log.Error("Failed to launch application %s in workspace %s: %v",
 					container.App, workspaceName, err)
 			}
@@ -162,10 +174,10 @@ func processContainer(
 		if err != nil {
 			log.Error("Failed to setup nested container: %v", err)
 		}
-		resizeInfo = append(resizeInfo, nestedInfo...)
+		apps = append(apps, nestedInfo...)
 	}
 
-	return resizeInfo, nil
+	return apps, nil
 }
 
 func setContainerLayout(layoutType string) error {
