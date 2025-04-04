@@ -22,22 +22,13 @@ func NewMark(id string) Mark {
 	return Mark{ID: id}
 }
 
-// Creates a mark for an application in a workspace
-func NewAppMark(workspaceName string, depth, containerID, appIndex int) Mark {
-	var id string
-	if depth == 0 {
-		// Top-level app
-		id = fmt.Sprintf("ws_%s_app_%d", workspaceName, appIndex+1)
-	} else {
-		// App in a container
-		id = fmt.Sprintf("ws_%s_con_%d_app_%d", workspaceName, containerID, appIndex+1)
-	}
+func NewAppMark(workspaceName string, containerID, appIndex int) Mark {
+	id := fmt.Sprintf("w%s_c%d_a%d", workspaceName, containerID, appIndex+1)
 	return Mark{ID: id}
 }
 
-// Creates a mark for a container in a workspace
 func NewContainerMark(workspaceName string, containerID int) Mark {
-	return Mark{ID: fmt.Sprintf("ws_%s_con_%d", workspaceName, containerID)}
+	return Mark{ID: fmt.Sprintf("w%s_c%d", workspaceName, containerID)}
 }
 
 // String representation of the mark
@@ -48,6 +39,16 @@ func (m Mark) String() string {
 // Focus a container with this mark
 func (m Mark) FocusCmd() string {
 	return fmt.Sprintf("[con_mark=\"%s\"] focus", m.ID)
+}
+
+// Focuses the container with this mark
+func (m Mark) Focus() error {
+	log.Debug("Focusing container with mark '%s'", m.ID)
+	_, err := RunCommand(m.FocusCmd())
+	if err != nil {
+		return fmt.Errorf("failed to focus container with mark '%s': %w", m.ID, err)
+	}
+	return nil
 }
 
 // Resize a container with this mark
@@ -68,41 +69,27 @@ func (m Mark) Apply() error {
 	return nil
 }
 
-// Focuses the container with this mark
-func (m Mark) Focus() error {
-	log.Debug("Focusing container with mark '%s'", m.ID)
-	_, err := RunCommand(m.FocusCmd())
-	if err != nil {
-		return fmt.Errorf("failed to focus container with mark '%s': %w", m.ID, err)
-	}
-	return nil
+func (m Mark) IsApp() bool {
+	return strings.Contains(m.ID, "_a") && strings.Contains(m.ID, "_c")
 }
 
-// Does the mark represents a top-level workspace app
-func (m Mark) IsWorkspaceApp() bool {
-	return strings.Contains(m.ID, "_app_") && !strings.Contains(m.ID, "_con_")
-}
-
-// Does the mark represents an app inside a container
-func (m Mark) IsContainerApp() bool {
-	return strings.Contains(m.ID, "_app_") && strings.Contains(m.ID, "_con_")
-}
-
-// Does the mark represents a container
 func (m Mark) IsContainer() bool {
-	return strings.Contains(m.ID, "_con_") && !strings.Contains(m.ID, "_app_")
+	return strings.Contains(m.ID, "_c") && !strings.Contains(m.ID, "_a")
 }
 
-// Extracts the workspace name from the mark
 func (m Mark) GetWorkspace() string {
-	parts := strings.Split(m.ID, "_")
-	if len(parts) > 1 {
-		return parts[1]
+	if len(m.ID) < 2 || !strings.HasPrefix(m.ID, "w") {
+		return ""
 	}
-	return ""
+
+	parts := strings.Split(m.ID, "_")
+	if len(parts) == 0 {
+		return ""
+	}
+
+	return strings.TrimPrefix(parts[0], "w")
 }
 
-// Retrieves all nodes with marks (for debugging purposes)
 func GetMarkedNodes() ([]Mark, error) {
 	log.Debug("Getting all marked nodes")
 
@@ -128,10 +115,9 @@ func GetMarkedNodes() ([]Mark, error) {
 		return nil, fmt.Errorf("failed to parse marks response: %w", err)
 	}
 
-	// Filter for our marks
 	var marks []Mark
 	for _, id := range markIDs {
-		if strings.HasPrefix(id, "ws_") {
+		if len(id) > 2 && strings.HasPrefix(id, "w") && strings.Contains(id, "_c") {
 			marks = append(marks, Mark{ID: id})
 		}
 	}
