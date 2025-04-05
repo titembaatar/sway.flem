@@ -21,6 +21,7 @@ type Flags struct {
 	Verbose     bool
 	Debug       bool
 	DryRun      bool
+	JSONLogs    bool
 }
 
 func main() {
@@ -108,6 +109,7 @@ func parseFlags(args []string) *Flags {
 	flagSet.BoolVar(&flags.Verbose, "verbose", false, "Enable verbose logging")
 	flagSet.BoolVar(&flags.Debug, "debug", false, "Enable debug mode with extra logging")
 	flagSet.BoolVar(&flags.DryRun, "dry-run", false, "Validate configuration without making changes")
+	flagSet.BoolVar(&flags.JSONLogs, "json-logs", false, "Output logs in JSON format (useful for log processing)")
 
 	flagSet.Parse(args)
 
@@ -122,6 +124,11 @@ func configureLogging(flags *Flags) {
 		log.SetLevel(log.LogLevelInfo)
 	} else {
 		log.SetLevel(log.LogLevelWarn)
+	}
+
+	// Check if JSON logging should be enabled via flag
+	if flags.JSONLogs {
+		log.EnableJSONLogging()
 	}
 }
 
@@ -138,6 +145,7 @@ func printUsage() {
 	fmt.Println("  -verbose              Enable verbose logging")
 	fmt.Println("  -debug                Enable debug mode with extra logging")
 	fmt.Println("  -dry-run              Validate configuration without making changes")
+	fmt.Println("  -json-logs            Output logs in JSON format (useful for log processing)")
 	fmt.Println("\nExamples:")
 	fmt.Println("  flem sway -config ~/.config/sway/config.yml")
 	fmt.Println("  flem sway -config ~/.config/sway/config.yml -verbose")

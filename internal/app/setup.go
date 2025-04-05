@@ -2,14 +2,13 @@ package app
 
 import (
 	"fmt"
-	"os/exec"
-	"strings"
 	"time"
 
 	"github.com/titembaatar/sway.flem/internal/config"
 	errs "github.com/titembaatar/sway.flem/internal/errors"
 	"github.com/titembaatar/sway.flem/internal/log"
 	"github.com/titembaatar/sway.flem/internal/sway"
+	"github.com/titembaatar/sway.flem/internal/util"
 )
 
 // Setup initializes and configures the Sway environment based on the configuration
@@ -51,7 +50,7 @@ func validateEnvironment() error {
 
 	log.Debug("Checking for required dependencies")
 
-	if err := checkCommand("swaymsg"); err != nil {
+	if err := util.CheckCommand("swaymsg"); err != nil {
 		fatalErr := errs.NewFatal(errs.ErrCommandNotFound, "Required command 'swaymsg' not found")
 		fatalErr.WithSuggestion("Make sure Sway is installed and swaymsg is in your PATH")
 		envOp.EndWithError(fatalErr)
@@ -111,23 +110,4 @@ func focusRequestedWorkspaces(config *config.Config, errorHandler *errs.ErrorHan
 	return lastError
 }
 
-// checkCommand checks if a command is available in the PATH
-func checkCommand(command string) error {
-	log.Debug("Checking if %s is available", command)
-
-	cmd := exec.Command(command, "-v")
-	output, err := cmd.CombinedOutput()
-
-	if err != nil {
-		log.Error("Required command '%s' is not available: %v", command, err)
-		if len(output) > 0 {
-			log.Error("Command output: %s", string(output))
-		}
-		return errs.NewFatal(errs.ErrCommandNotFound, fmt.Sprintf("Required command '%s' not found", command)).
-			WithSuggestion(fmt.Sprintf("Make sure '%s' is installed and in your PATH", command))
-	}
-
-	outputStr := strings.TrimSpace(string(output))
-	log.Debug("Command '%s' is available, version: %s", command, outputStr)
-	return nil
-}
+// Removed duplicate function - now using util.CheckCommand

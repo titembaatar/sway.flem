@@ -2,13 +2,13 @@ package sway
 
 import (
 	"fmt"
-	"os/exec"
 	"strings"
 	"time"
 
 	"github.com/titembaatar/sway.flem/internal/config"
 	errs "github.com/titembaatar/sway.flem/internal/errors"
 	"github.com/titembaatar/sway.flem/internal/log"
+	"github.com/titembaatar/sway.flem/internal/util"
 	"github.com/titembaatar/sway.flem/pkg/types"
 )
 
@@ -117,7 +117,7 @@ func (a *App) Launch(errorHandler *errs.ErrorHandler) error {
 }
 
 func (a *App) start(errorHandler *errs.ErrorHandler) error {
-	if err := executeCommand(a.Command); err != nil {
+	if err := util.ExecuteCommand(a.Command); err != nil {
 		launchErr := errs.NewAppLaunchError(a.Name, a.Command, err)
 
 		if errorHandler != nil {
@@ -248,39 +248,7 @@ func RunCommands(commands []string, errorHandler *errs.ErrorHandler) error {
 }
 
 func executeCommand(cmdStr string) error {
-	parts := strings.Fields(cmdStr)
-	if len(parts) == 0 {
-		return fmt.Errorf("empty command")
-	}
-
-	if err := validateCommand(parts[0]); err != nil {
-		return err
-	}
-
-	var cmd *exec.Cmd
-	if len(parts) == 1 {
-		cmd = exec.Command(parts[0])
-	} else {
-		cmd = exec.Command(parts[0], parts[1:]...)
-	}
-
-	log.Debug("Executing command: %s", cmdStr)
-	return cmd.Start()
-}
-
-func validateCommand(command string) error {
-	if strings.ContainsAny(command, "/\\") {
-		return nil
-	}
-
-	_, err := exec.LookPath(command)
-	if err != nil {
-		return errs.New(errs.ErrCommandNotFound,
-			fmt.Sprintf("Command '%s' not found in PATH", command)).
-			WithSuggestion(fmt.Sprintf("Make sure '%s' is installed and available in your PATH", command))
-	}
-
-	return nil
+	return util.ExecuteCommand(cmdStr)
 }
 
 func getOrientation(layout string) string {
