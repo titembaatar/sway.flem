@@ -168,7 +168,7 @@ func RunCommands(commands []string) error {
 			continue
 		}
 
-		time.Sleep(200 * time.Millisecond)
+		time.Sleep(400 * time.Millisecond)
 	}
 
 	if len(errors) > 0 {
