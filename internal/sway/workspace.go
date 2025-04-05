@@ -3,13 +3,16 @@ package sway
 import (
 	"fmt"
 	"strings"
+	"time"
 
+	"github.com/titembaatar/sway.flem/internal/config"
 	"github.com/titembaatar/sway.flem/internal/log"
 )
 
 type Workspace struct {
-	Name   string
-	Layout string
+	Name      string
+	Layout    string
+	Container *Container
 }
 
 func NewWorkspace(name string, layout string) *Workspace {
@@ -19,27 +22,30 @@ func NewWorkspace(name string, layout string) *Workspace {
 	}
 }
 
-func (w *Workspace) List() ([]string, error) {
-	log.Debug("Getting workspaces from sway")
+func (w *Workspace) Setup(workspace config.Workspace) error {
+	log.Info("Setting up workspace: %s", w.Name)
 
-	type workspaceInfo struct {
-		Name string `json:"name"`
+	if err := w.Create(); err != nil {
+		return fmt.Errorf("failed to create workspace: %w", err)
 	}
 
-	var workspaces []workspaceInfo
-
-	cmd := NewRawSwayCmd("", "get_workspaces")
-	if err := cmd.GetJSON(&workspaces); err != nil {
-		return nil, err
+	container, err := ProcessContainer(w.Name, workspace.Containers, w.Layout, 0)
+	if err != nil {
+		log.Error("Failed to process container for workspace %s: %v", w.Name, err)
+		return err
 	}
 
-	names := make([]string, len(workspaces))
-	for i, ws := range workspaces {
-		names[i] = ws.Name
+	w.Container = container
+
+	if err := container.Setup(); err != nil {
+		log.Error("Failed to setup container for workspace %s: %v", w.Name, err)
+		return err
 	}
 
-	log.Debug("Found %d workspaces: %s", len(names), strings.Join(names, ", "))
-	return names, nil
+	container.ResizeApps()
+
+	log.Info("Workspace %s setup complete", w.Name)
+	return nil
 }
 
 func (w *Workspace) Switch() error {
@@ -47,6 +53,11 @@ func (w *Workspace) Switch() error {
 	cmd := NewSwayCmd(command)
 	_, err := cmd.Run()
 	return err
+}
+
+func SwitchWorkspace(workspace string) error {
+	ws := NewWorkspace(workspace, "")
+	return ws.Switch()
 }
 
 func (w *Workspace) Create() error {
@@ -59,14 +70,42 @@ func (w *Workspace) Create() error {
 		return nil // No layout to set
 	}
 
-	command := fmt.Sprintf("layout %s", w.Layout)
-	cmd := NewSwayCmd(command)
-	_, err := cmd.Run()
+	cmd := fmt.Sprintf("layout %s", w.Layout)
+	_, err := RunSwayCmd(cmd)
 	if err != nil {
 		return fmt.Errorf("%w: failed to set layout '%s' for workspace '%s': %v",
 			ErrWorkspaceCreateFailed, w.Layout, w.Name, err)
 	}
 
 	log.Info("Successfully created workspace '%s' with layout '%s'", w.Name, w.Layout)
+	return nil
+}
+
+func CreateWorkspace(name string, layout string) error {
+	ws := NewWorkspace(name, layout)
+	return ws.Create()
+}
+
+func FocusWorkspaces(workspaces []string) error {
+	log.Info("Focusing on %d workspaces", len(workspaces))
+	var errors []string
+
+	for i, workspace := range workspaces {
+		ws := NewWorkspace(workspace, "")
+		log.Debug("Focusing on workspace: %s", workspace)
+
+		if err := ws.Switch(); err != nil {
+			log.Error("Failed to focus on workspace %s: %v", workspace, err)
+			errors = append(errors, fmt.Sprintf("workspace %s: %v", workspace, err))
+		} else {
+			log.Info("Successfully focused on workspace %s (%d of %d)", workspace, i+1, len(workspaces))
+			time.Sleep(100 * time.Millisecond)
+		}
+	}
+
+	if len(errors) > 0 {
+		return fmt.Errorf("failed to focus on some workspaces: %s", strings.Join(errors, "; "))
+	}
+
 	return nil
 }

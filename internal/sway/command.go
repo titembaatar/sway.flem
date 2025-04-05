@@ -130,7 +130,12 @@ func (c *SwayCmd) Run() ([]CommandResponse, error) {
 	return responses, nil
 }
 
-func (c *SwayCmd) GetJSON(v interface{}) error {
+func RunSwayCmd(command string) ([]CommandResponse, error) {
+	cmd := NewSwayCmd(command)
+	return cmd.Run()
+}
+
+func (c *SwayCmd) GetJSON(v any) error {
 	c.Raw = true
 
 	cmd := exec.Command("swaymsg", "-t", c.Type, "-r", "--", c.Command)

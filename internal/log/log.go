@@ -23,10 +23,13 @@ var (
 )
 
 const (
-	ComponentConfig = "CONFIG"
-	ComponentSway   = "SWAY"
-	ComponentApp    = "APP"
 	ComponentCore   = "CORE"
+	ComponentSway   = "SWAY"
+	ComponentConfig = "CONF"
+	ComponentEnv    = "ENV "
+	ComponentWs     = "WKSP"
+	ComponentCon    = "CON "
+	ComponentApp    = "APP "
 )
 
 func SetLevel(level LogLevel) {
