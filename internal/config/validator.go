@@ -3,13 +3,15 @@ package config
 import (
 	"fmt"
 
+	errs "github.com/titembaatar/sway.flem/internal/errors"
 	"github.com/titembaatar/sway.flem/internal/log"
 	"github.com/titembaatar/sway.flem/pkg/types"
 )
 
 func ValidateConfig(config *Config) error {
 	if len(config.Workspaces) == 0 {
-		return NewConfigError(ErrNoWorkspaces, "", "", -1)
+		return errs.NewFatalConfigError(errs.ErrNoWorkspaces, "", "", -1).
+			WithSuggestion("Add at least one workspace to your configuration file")
 	}
 
 	log.Debug("Validating configuration with %d workspaces", len(config.Workspaces))
@@ -18,7 +20,9 @@ func ValidateConfig(config *Config) error {
 		layoutStr := string(workspace.Layout)
 		layout, err := types.ParseLayoutType(layoutStr)
 		if err != nil {
-			return NewConfigError(err, name, "layout", -1)
+			configErr := errs.NewConfigError(err, name, "layout", -1).
+				WithSuggestion(errs.GetLayoutSuggestion())
+			return configErr
 		}
 
 		workspace.Layout = layout
@@ -37,11 +41,13 @@ func ValidateConfig(config *Config) error {
 
 func validateWorkspace(name string, workspace Workspace) error {
 	if !workspace.Layout.IsValid() {
-		return NewConfigError(types.ErrInvalidLayoutType, name, "", -1)
+		return errs.NewConfigError(errs.ErrInvalidLayoutType, name, "", -1).
+			WithSuggestion(errs.GetLayoutSuggestion())
 	}
 
 	if len(workspace.Containers) == 0 {
-		return NewConfigError(ErrNoContainers, name, "", -1)
+		return errs.NewConfigError(errs.ErrNoContainers, name, "", -1).
+			WithSuggestion("Add at least one container to the workspace")
 	}
 
 	for i, container := range workspace.Containers {
@@ -58,11 +64,13 @@ func validateContainer(workspaceName string, container Container, context string
 	isNestedContainer := len(container.Containers) > 0
 
 	if isApp && isNestedContainer {
-		return NewConfigError(ErrInvalidContainerStructure, workspaceName, context, -1)
+		return errs.NewConfigError(errs.ErrInvalidContainerStructure, workspaceName, context, -1).
+			WithSuggestion(errs.GetContainerStructureSuggestion())
 	}
 
 	if !isApp && !isNestedContainer {
-		return NewConfigError(ErrInvalidContainerStructure, workspaceName, context, -1)
+		return errs.NewConfigError(errs.ErrInvalidContainerStructure, workspaceName, context, -1).
+			WithSuggestion("Specify either an 'app' property or a list of nested 'containers'")
 	}
 
 	if err := validateContainerProperties(workspaceName, container, context); err != nil {
@@ -82,11 +90,13 @@ func validateContainerProperties(workspaceName string, container Container, cont
 	if container.Size != "" {
 		size, err := types.ParseSize(container.Size)
 		if err != nil {
-			return NewConfigError(err, workspaceName, fmt.Sprintf("%s.size", context), -1)
+			return errs.NewConfigError(err, workspaceName, fmt.Sprintf("%s.size", context), -1).
+				WithSuggestion(errs.GetSizeSuggestion())
 		}
 
 		if !size.IsValid() {
-			return NewConfigError(types.ErrInvalidSizeFormat, workspaceName, fmt.Sprintf("%s.size", context), -1)
+			return errs.NewConfigError(errs.ErrInvalidSizeFormat, workspaceName, fmt.Sprintf("%s.size", context), -1).
+				WithSuggestion(errs.GetSizeSuggestion())
 		}
 	}
 
@@ -95,17 +105,20 @@ func validateContainerProperties(workspaceName string, container Container, cont
 
 func validateNestedContainer(workspaceName string, container Container, context string) error {
 	if container.Split == "" {
-		return NewConfigError(ErrMissingSplit, workspaceName, context, -1)
+		return errs.NewConfigError(errs.ErrMissingSplit, workspaceName, context, -1).
+			WithSuggestion("Add a 'split' property to specify the layout for nested containers")
 	}
 
 	splitStr := string(container.Split)
 	layout, err := types.ParseLayoutType(splitStr)
 	if err != nil {
-		return NewConfigError(err, workspaceName, fmt.Sprintf("%s.split", context), -1)
+		return errs.NewConfigError(err, workspaceName, fmt.Sprintf("%s.split", context), -1).
+			WithSuggestion(errs.GetLayoutSuggestion())
 	}
 
 	if !layout.IsValid() {
-		return NewConfigError(types.ErrInvalidLayoutType, workspaceName, fmt.Sprintf("%s.split", context), -1)
+		return errs.NewConfigError(errs.ErrInvalidLayoutType, workspaceName, fmt.Sprintf("%s.split", context), -1).
+			WithSuggestion(errs.GetLayoutSuggestion())
 	}
 
 	// Note: This doesn't actually modify the original container since we're working on a copy

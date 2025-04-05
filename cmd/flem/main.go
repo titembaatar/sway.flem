@@ -7,6 +7,7 @@ import (
 
 	"github.com/titembaatar/sway.flem/internal/app"
 	"github.com/titembaatar/sway.flem/internal/config"
+	errs "github.com/titembaatar/sway.flem/internal/errors"
 	"github.com/titembaatar/sway.flem/internal/log"
 )
 
@@ -50,8 +51,10 @@ func main() {
 // Handles the 'sway' subcommand
 func runSwayCommand(args []string) {
 	flags := parseFlags(args)
-
 	configureLogging(flags)
+
+	// Create error handler
+	errorHandler := errs.NewErrorHandler(true, flags.Verbose, flags.Debug)
 
 	if flags.ShowVersion {
 		fmt.Printf("flem v%s\n", version)
@@ -59,17 +62,18 @@ func runSwayCommand(args []string) {
 	}
 
 	if flags.ConfigFile == "" {
-		log.Error("Config file must be specified")
-		fmt.Println("Error: Config file must be specified with -config flag")
+		errorHandler.Handle(errs.NewFatal(errs.ErrConfigNotFound, "Config file must be specified with -config flag"))
 		fmt.Println("Run 'flem sway -h' for usage information")
 		os.Exit(1)
 	}
 
 	log.Info("Starting flem sway v%s", version)
 
+	// Load configuration
 	cfg, err := config.LoadConfig(flags.ConfigFile)
 	if err != nil {
-		log.Fatal("Failed to load configuration: %v", err)
+		errorHandler.Handle(errs.Wrap(err, "Failed to load configuration"))
+		os.Exit(1)
 	}
 
 	for name := range cfg.Workspaces {
@@ -81,11 +85,16 @@ func runSwayCommand(args []string) {
 		os.Exit(0)
 	}
 
+	// Setup Sway environment
 	if err := app.Setup(cfg); err != nil {
-		log.Fatal("Failed to setup environment: %v", err)
+		errorHandler.Handle(errs.Wrap(err, "Failed to setup environment"))
+		os.Exit(1)
 	}
 
 	log.Info("Sway environment has been successfully configured")
+
+	// Summarize any non-fatal errors or warnings
+	errorHandler.SummarizeErrors()
 }
 
 // Parses command line flags and returns the parsed values

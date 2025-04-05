@@ -2,34 +2,43 @@ package sway
 
 import (
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/titembaatar/sway.flem/internal/config"
+	errs "github.com/titembaatar/sway.flem/internal/errors"
 	"github.com/titembaatar/sway.flem/internal/log"
 )
 
 type Workspace struct {
-	Name      string
-	Layout    string
-	Container *Container
+	Name         string
+	Layout       string
+	Container    *Container
+	ErrorHandler *errs.ErrorHandler
 }
 
 func NewWorkspace(name string, layout string) *Workspace {
 	return &Workspace{
-		Name:   name,
-		Layout: layout,
+		Name:      name,
+		Layout:    layout,
+		Container: nil,
 	}
 }
 
-func (w *Workspace) Setup(workspace config.Workspace) error {
+// WithErrorHandler adds an error handler to the workspace
+func (w *Workspace) WithErrorHandler(handler *errs.ErrorHandler) *Workspace {
+	w.ErrorHandler = handler
+	return w
+}
+
+func (w *Workspace) Setup(workspace config.Workspace, errorHandler *errs.ErrorHandler) error {
+	w.ErrorHandler = errorHandler
 	log.Info("Setting up workspace: %s", w.Name)
 
 	if err := w.Create(); err != nil {
-		return fmt.Errorf("failed to create workspace: %w", err)
+		return errs.Wrap(err, fmt.Sprintf("Failed to create workspace '%s'", w.Name))
 	}
 
-	container, err := ProcessContainer(w.Name, workspace.Containers, w.Layout, 0)
+	container, err := ProcessContainer(w.Name, workspace.Containers, w.Layout, 0, errorHandler)
 	if err != nil {
 		log.Error("Failed to process container for workspace %s: %v", w.Name, err)
 		return err
@@ -37,12 +46,12 @@ func (w *Workspace) Setup(workspace config.Workspace) error {
 
 	w.Container = container
 
-	if err := container.Setup(); err != nil {
+	if err := container.Setup(errorHandler); err != nil {
 		log.Error("Failed to setup container for workspace %s: %v", w.Name, err)
 		return err
 	}
 
-	container.ResizeApps()
+	container.ResizeApps(errorHandler)
 
 	log.Info("Workspace %s setup complete", w.Name)
 	return nil
@@ -51,19 +60,34 @@ func (w *Workspace) Setup(workspace config.Workspace) error {
 func (w *Workspace) Switch() error {
 	command := fmt.Sprintf("workspace %s", w.Name)
 	cmd := NewSwayCmd(command)
+	if w.ErrorHandler != nil {
+		cmd.WithErrorHandler(w.ErrorHandler)
+	}
+
 	_, err := cmd.Run()
-	return err
+	if err != nil {
+		return errs.Wrap(err, fmt.Sprintf("Failed to switch to workspace '%s'", w.Name))
+	}
+	return nil
 }
 
-func SwitchWorkspace(workspace string) error {
-	ws := NewWorkspace(workspace, "")
+func SwitchWorkspace(workspace string, errorHandler *errs.ErrorHandler) error {
+	ws := NewWorkspace(workspace, "").WithErrorHandler(errorHandler)
 	return ws.Switch()
 }
 
 func (w *Workspace) Create() error {
 	if err := w.Switch(); err != nil {
-		return fmt.Errorf("%w: failed to switch to workspace '%s': %v",
-			ErrWorkspaceCreateFailed, w.Name, err)
+		createErr := errs.New(errs.ErrWorkspaceCreateFailed,
+			fmt.Sprintf("Failed to create workspace '%s'", w.Name))
+		createErr.WithCategory("Sway")
+		createErr.WithSuggestion("Check that Sway is running and accepting commands")
+
+		if w.ErrorHandler != nil {
+			w.ErrorHandler.Handle(createErr)
+		}
+
+		return createErr
 	}
 
 	if w.Layout == "" {
@@ -71,18 +95,30 @@ func (w *Workspace) Create() error {
 	}
 
 	cmd := fmt.Sprintf("layout %s", w.Layout)
-	_, err := RunSwayCmd(cmd)
+	swayCmd := NewSwayCmd(cmd)
+	if w.ErrorHandler != nil {
+		swayCmd.WithErrorHandler(w.ErrorHandler)
+	}
+
+	_, err := swayCmd.Run()
 	if err != nil {
-		return fmt.Errorf("%w: failed to set layout '%s' for workspace '%s': %v",
-			ErrWorkspaceCreateFailed, w.Layout, w.Name, err)
+		layoutErr := errs.New(errs.ErrSetLayoutFailed,
+			fmt.Sprintf("Failed to set layout '%s' for workspace '%s'", w.Layout, w.Name))
+		layoutErr.WithCategory("Sway")
+
+		if w.ErrorHandler != nil {
+			w.ErrorHandler.Handle(layoutErr)
+		}
+
+		return layoutErr
 	}
 
 	log.Info("Successfully created workspace '%s' with layout '%s'", w.Name, w.Layout)
 	return nil
 }
 
-func CreateWorkspace(name string, layout string) error {
-	ws := NewWorkspace(name, layout)
+func CreateWorkspace(name string, layout string, errorHandler *errs.ErrorHandler) error {
+	ws := NewWorkspace(name, layout).WithErrorHandler(errorHandler)
 	return ws.Create()
 }
 
@@ -104,7 +140,10 @@ func FocusWorkspaces(workspaces []string) error {
 	}
 
 	if len(errors) > 0 {
-		return fmt.Errorf("failed to focus on some workspaces: %s", strings.Join(errors, "; "))
+		focusErr := errs.New(errs.ErrFocusFailed, "Failed to focus on some workspaces")
+		focusErr.WithCategory("Sway")
+		focusErr.WithSuggestion("Check that the specified workspaces exist")
+		return focusErr
 	}
 
 	return nil

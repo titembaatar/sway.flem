@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"strings"
 
+	errs "github.com/titembaatar/sway.flem/internal/errors"
 	"github.com/titembaatar/sway.flem/internal/log"
 )
 
@@ -16,11 +17,12 @@ type CommandResponse struct {
 }
 
 type SwayCmd struct {
-	Command        string // The command to execute
-	Type           string // Command type: command, get_workspaces, get_marks, etc.
-	Raw            bool   // Whether to use -r flag for raw output
-	ExpectJSON     bool   // Whether the response is expected to be JSON
-	ErrorsNonFatal bool   // Whether errors should be treated as non-fatal
+	Command        string             // The command to execute
+	Type           string             // Command type: command, get_workspaces, get_marks, etc.
+	Raw            bool               // Whether to use -r flag for raw output
+	ExpectJSON     bool               // Whether the response is expected to be JSON
+	ErrorsNonFatal bool               // Whether errors should be treated as non-fatal
+	ErrorHandler   *errs.ErrorHandler // Error handler instance
 }
 
 func NewSwayCmd(command string) *SwayCmd {
@@ -30,6 +32,7 @@ func NewSwayCmd(command string) *SwayCmd {
 		Raw:            false,
 		ExpectJSON:     true,
 		ErrorsNonFatal: false,
+		ErrorHandler:   nil,
 	}
 }
 
@@ -65,6 +68,11 @@ func (c *SwayCmd) WithErrorsNonFatal(nonFatal bool) *SwayCmd {
 	return c
 }
 
+func (c *SwayCmd) WithErrorHandler(handler *errs.ErrorHandler) *SwayCmd {
+	c.ErrorHandler = handler
+	return c
+}
+
 func (c *SwayCmd) Run() ([]CommandResponse, error) {
 	log.SetComponent(log.ComponentSway)
 	log.Debug("Executing sway command: %s", c.Command)
@@ -95,8 +103,24 @@ func (c *SwayCmd) Run() ([]CommandResponse, error) {
 		if errMsg != "" {
 			log.Error("Command stderr: %s", errMsg)
 		}
-		cmdOp.EndWithError(err)
-		return nil, NewSwayCommandError(c.Command, err, errMsg)
+
+		// Create a Sway command error
+		cmdErr := errs.NewSwayCommandError(c.Command, err, errMsg)
+
+		// Set severity based on the non-fatal flag
+		if c.ErrorsNonFatal {
+			cmdErr.Severity = errs.SeverityWarning
+		} else {
+			cmdErr.Severity = errs.SeverityError
+		}
+
+		// Handle the error if a handler is provided
+		if c.ErrorHandler != nil {
+			c.ErrorHandler.Handle(cmdErr)
+		}
+
+		cmdOp.EndWithError(cmdErr)
+		return nil, cmdErr
 	}
 
 	// If we don't expect JSON, just return empty response
@@ -110,15 +134,32 @@ func (c *SwayCmd) Run() ([]CommandResponse, error) {
 	if err := json.Unmarshal(stdout.Bytes(), &responses); err != nil {
 		log.Error("Failed to parse response for command '%s': %v", c.Command, err)
 		log.Debug("Raw response: %s", stdout.String())
-		cmdOp.EndWithError(err)
-		return nil, fmt.Errorf("failed to parse sway command response: %w", err)
+
+		parseErr := errs.New(err, fmt.Sprintf("Failed to parse sway command response for '%s'", c.Command))
+		parseErr.WithCategory("Sway")
+
+		// Handle the error if a handler is provided
+		if c.ErrorHandler != nil {
+			c.ErrorHandler.Handle(parseErr)
+		}
+
+		cmdOp.EndWithError(parseErr)
+		return nil, parseErr
 	}
 
 	// Check for command success
 	for i, resp := range responses {
 		if !resp.Success && !c.ErrorsNonFatal {
 			log.Error("Sway command '%s' failed: %s", c.Command, resp.Error)
-			cmdErr := fmt.Errorf("sway command failed: %s", resp.Error)
+
+			cmdErr := errs.New(errs.ErrCommandFailed, fmt.Sprintf("Sway command '%s' failed: %s", c.Command, resp.Error))
+			cmdErr.WithCategory("Sway")
+
+			// Handle the error if a handler is provided
+			if c.ErrorHandler != nil {
+				c.ErrorHandler.Handle(cmdErr)
+			}
+
 			cmdOp.EndWithError(cmdErr)
 			return responses, cmdErr
 		}
@@ -151,14 +192,37 @@ func (c *SwayCmd) GetJSON(v any) error {
 		if errMsg != "" {
 			log.Error("Stderr: %s", errMsg)
 		}
-		return fmt.Errorf("swaymsg error: %w: %s", err, errMsg)
+
+		cmdErr := errs.NewSwayCommandError(c.Command, err, errMsg)
+
+		// Handle the error if a handler is provided
+		if c.ErrorHandler != nil {
+			c.ErrorHandler.Handle(cmdErr)
+		}
+
+		return cmdErr
 	}
 
 	if err := json.Unmarshal(stdout.Bytes(), v); err != nil {
 		log.Error("Failed to parse response: %v", err)
 		log.Debug("Raw response: %s", stdout.String())
-		return fmt.Errorf("failed to parse response: %w", err)
+
+		parseErr := errs.New(err, fmt.Sprintf("Failed to parse JSON response for sway command '%s'", c.Command))
+		parseErr.WithCategory("Sway")
+
+		// Handle the error if a handler is provided
+		if c.ErrorHandler != nil {
+			c.ErrorHandler.Handle(parseErr)
+		}
+
+		return parseErr
 	}
 
 	return nil
+}
+
+// Run a sway command with an error handler
+func RunSwayCommandWithErrorHandler(command string, errorHandler *errs.ErrorHandler) ([]CommandResponse, error) {
+	cmd := NewSwayCmd(command).WithErrorHandler(errorHandler)
+	return cmd.Run()
 }

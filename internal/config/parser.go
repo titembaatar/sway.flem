@@ -1,11 +1,11 @@
 package config
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 
+	errs "github.com/titembaatar/sway.flem/internal/errors"
 	"github.com/titembaatar/sway.flem/internal/log"
 	"gopkg.in/yaml.v3"
 )
@@ -19,21 +19,23 @@ func LoadConfig(path string) (*Config, error) {
 	absPath, err := filepath.Abs(path)
 	if err != nil {
 		loadOp.EndWithError(err)
-		return nil, fmt.Errorf("failed to get absolute path: %w", err)
+		return nil, errs.Wrap(err, "Failed to get absolute path for config file")
 	}
 
 	log.Info("Loading configuration from %s", absPath)
 
 	file, err := os.Open(absPath)
 	if err != nil {
-		if errors.Is(err, os.ErrNotExist) {
+		if os.IsNotExist(err) {
 			log.Error("Configuration file not found: %s", absPath)
-			loadErr := fmt.Errorf("config file not found: %w", err)
+			loadErr := errs.NewFatalConfigError(errs.ErrConfigNotFound, "", "", -1)
+			loadErr.WithConfigFile(absPath, 0)
+			loadErr.WithSuggestion(fmt.Sprintf("Check that the file exists at '%s'", absPath))
 			loadOp.EndWithError(loadErr)
 			return nil, loadErr
 		}
 		log.Error("Failed to open configuration file: %v", err)
-		loadErr := fmt.Errorf("failed to open config file: %w", err)
+		loadErr := errs.Wrap(err, "Failed to open config file")
 		loadOp.EndWithError(loadErr)
 		return nil, loadErr
 	}
@@ -45,7 +47,9 @@ func LoadConfig(path string) (*Config, error) {
 
 	if err := decoder.Decode(&config); err != nil {
 		log.Error("Failed to parse YAML configuration: %v", err)
-		loadErr := fmt.Errorf("failed to decode config: %w", err)
+		loadErr := errs.NewFatalConfigError(errs.ErrConfigParse, "", "", -1)
+		loadErr.WithConfigFile(absPath, 0)
+		loadErr.WithSuggestion("Check your YAML syntax for errors")
 		loadOp.EndWithError(loadErr)
 		return nil, loadErr
 	}

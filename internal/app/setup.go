@@ -7,36 +7,44 @@ import (
 	"time"
 
 	"github.com/titembaatar/sway.flem/internal/config"
+	errs "github.com/titembaatar/sway.flem/internal/errors"
 	"github.com/titembaatar/sway.flem/internal/log"
 	"github.com/titembaatar/sway.flem/internal/sway"
 )
 
-// Initializes and configures the Sway environment based on the configuration
+// Setup initializes and configures the Sway environment based on the configuration
 func Setup(config *config.Config) error {
 	log.SetComponent(log.ComponentApp)
 
 	op := log.Operation("environment setup")
 	op.Begin()
 
+	// Create an error handler that doesn't exit on fatal errors
+	errorHandler := errs.NewErrorHandler(false, true, false)
+
 	if err := validateEnvironment(); err != nil {
 		op.EndWithError(err)
 		return err
 	}
 
-	if err := executeSetup(config); err != nil {
+	if err := executeSetup(config, errorHandler); err != nil {
 		op.EndWithError(err)
 		return err
 	}
 
-	if err := focusRequestedWorkspaces(config); err != nil {
+	if err := focusRequestedWorkspaces(config, errorHandler); err != nil {
 		log.Warn("Some workspace focusing operations failed: %v", err)
+		// Continue execution - focus failures are not fatal
 	}
+
+	// Report any errors or warnings that were encountered
+	errorHandler.SummarizeErrors()
 
 	op.End()
 	return nil
 }
 
-// Verifies that all required external dependencies are available
+// validateEnvironment verifies that all required external dependencies are available
 func validateEnvironment() error {
 	envOp := log.Operation("dependency validation")
 	envOp.Begin()
@@ -44,8 +52,10 @@ func validateEnvironment() error {
 	log.Debug("Checking for required dependencies")
 
 	if err := checkCommand("swaymsg"); err != nil {
-		envOp.EndWithError(err)
-		return fmt.Errorf("swaymsg not found: %w", err)
+		fatalErr := errs.NewFatal(errs.ErrCommandNotFound, "Required command 'swaymsg' not found")
+		fatalErr.WithSuggestion("Make sure Sway is installed and swaymsg is in your PATH")
+		envOp.EndWithError(fatalErr)
+		return fatalErr
 	}
 
 	log.Debug("All dependencies are available")
@@ -53,8 +63,8 @@ func validateEnvironment() error {
 	return nil
 }
 
-// Execute the environment setup
-func executeSetup(config *config.Config) error {
+// executeSetup applies the environment configuration
+func executeSetup(config *config.Config, errorHandler *errs.ErrorHandler) error {
 	setupOp := log.Operation("sway configuration")
 	setupOp.Begin()
 
@@ -63,9 +73,10 @@ func executeSetup(config *config.Config) error {
 
 	startTime := time.Now()
 
-	if err := sway.SetupEnvironment(config); err != nil {
-		setupOp.EndWithError(err)
-		return fmt.Errorf("failed to setup environment: %w", err)
+	if err := sway.SetupEnvironment(config, errorHandler); err != nil {
+		setupErr := errs.Wrap(err, "Failed to setup environment")
+		setupOp.EndWithError(setupErr)
+		return setupErr
 	}
 
 	elapsed := time.Since(startTime)
@@ -75,8 +86,8 @@ func executeSetup(config *config.Config) error {
 	return nil
 }
 
-// Focus on workspaces specified in the config
-func focusRequestedWorkspaces(config *config.Config) error {
+// focusRequestedWorkspaces focuses on workspaces specified in the config
+func focusRequestedWorkspaces(config *config.Config, errorHandler *errs.ErrorHandler) error {
 	if len(config.Focus) == 0 {
 		return nil
 	}
@@ -85,17 +96,22 @@ func focusRequestedWorkspaces(config *config.Config) error {
 	focusOp.Begin()
 
 	log.Info("Focusing on %d specified workspaces: %v", len(config.Focus), config.Focus)
+	var lastError error
+
 	for _, focus := range config.Focus {
 		workspace := sway.NewWorkspace(focus, "")
-		workspace.Switch()
+		if err := workspace.Switch(); err != nil {
+			focusErr := errs.Wrap(err, fmt.Sprintf("Failed to focus on workspace '%s'", focus))
+			errorHandler.Handle(focusErr)
+			lastError = focusErr
+		}
 	}
 
 	focusOp.End()
-
-	return nil
+	return lastError
 }
 
-// Checks if a command is available in the PATH
+// checkCommand checks if a command is available in the PATH
 func checkCommand(command string) error {
 	log.Debug("Checking if %s is available", command)
 
@@ -107,7 +123,8 @@ func checkCommand(command string) error {
 		if len(output) > 0 {
 			log.Error("Command output: %s", string(output))
 		}
-		return fmt.Errorf("%s is not available: %w", command, err)
+		return errs.NewFatal(errs.ErrCommandNotFound, fmt.Sprintf("Required command '%s' not found", command)).
+			WithSuggestion(fmt.Sprintf("Make sure '%s' is installed and in your PATH", command))
 	}
 
 	outputStr := strings.TrimSpace(string(output))

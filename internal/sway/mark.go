@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"strings"
 
+	errs "github.com/titembaatar/sway.flem/internal/errors"
 	"github.com/titembaatar/sway.flem/internal/log"
 )
 
@@ -35,16 +36,28 @@ func NewContainerMark(workspaceName string, containerID int) Mark {
 	return Mark{ID: fmt.Sprintf("w%s_c%d", workspaceName, containerID)}
 }
 
-func (m Mark) Focus() error {
+func (m Mark) Focus(errorHandler *errs.ErrorHandler) error {
 	log.Debug("Focusing container with mark '%s'", m.ID)
 
 	cmd := fmt.Sprintf("[con_mark=\"%s\"] focus", m.ID)
 	swayCmd := NewSwayCmd(cmd)
+	if errorHandler != nil {
+		swayCmd.WithErrorHandler(errorHandler)
+	}
 
 	_, err := swayCmd.Run()
 
 	if err != nil {
-		return fmt.Errorf("failed to focus container with mark '%s': %w", m.ID, err)
+		focusErr := errs.New(errs.ErrFocusFailed,
+			fmt.Sprintf("Failed to focus container with mark '%s'", m.ID))
+		focusErr.WithCategory("Sway")
+		focusErr.WithSuggestion(fmt.Sprintf("Check that a container with mark '%s' exists", m.ID))
+
+		if errorHandler != nil {
+			errorHandler.Handle(focusErr)
+		}
+
+		return focusErr
 	}
 
 	return nil
@@ -54,14 +67,24 @@ func (m Mark) Resize(width string, height string) string {
 	return fmt.Sprintf("resize set %s %s", width, height)
 }
 
-func (m Mark) Apply() error {
+func (m Mark) Apply(errorHandler *errs.ErrorHandler) error {
 	log.Debug("Applying mark '%s' to focused container", m.ID)
 	cmd := fmt.Sprintf("mark --add %s", m.ID)
 	swayCmd := NewSwayCmd(cmd)
+	if errorHandler != nil {
+		swayCmd.WithErrorHandler(errorHandler)
+	}
 
 	_, err := swayCmd.Run()
 	if err != nil {
-		return NewMarkError(m.ID, fmt.Errorf("%w: %v", ErrMarkingFailed, err))
+		markErr := errs.NewMarkError(m.ID, errs.ErrMarkingFailed)
+		markErr.WithSuggestion("Make sure a container is focused before trying to mark it")
+
+		if errorHandler != nil {
+			errorHandler.Handle(markErr)
+		}
+
+		return markErr
 	}
 
 	return nil
@@ -88,7 +111,7 @@ func (m Mark) GetWorkspace() string {
 	return strings.TrimPrefix(parts[0], "w")
 }
 
-func GetMarkedNodes() ([]Mark, error) {
+func GetMarkedNodes(errorHandler *errs.ErrorHandler) ([]Mark, error) {
 	log.Debug("Getting all marked nodes")
 
 	cmd := exec.Command("swaymsg", "-t", "get_marks", "-r")
@@ -104,13 +127,28 @@ func GetMarkedNodes() ([]Mark, error) {
 		if errMsg != "" {
 			log.Error("Stderr: %s", errMsg)
 		}
-		return nil, fmt.Errorf("swaymsg error: %w: %s", err, errMsg)
+
+		cmdErr := errs.NewSwayCommandError("get_marks", err, errMsg)
+
+		if errorHandler != nil {
+			errorHandler.Handle(cmdErr)
+		}
+
+		return nil, cmdErr
 	}
 
 	var markIDs []string
 	if err := json.Unmarshal(stdout.Bytes(), &markIDs); err != nil {
 		log.Error("Failed to parse marks response: %v", err)
-		return nil, fmt.Errorf("failed to parse marks response: %w", err)
+
+		parseErr := errs.New(err, "Failed to parse marks response")
+		parseErr.WithCategory("Sway")
+
+		if errorHandler != nil {
+			errorHandler.Handle(parseErr)
+		}
+
+		return nil, parseErr
 	}
 
 	var marks []Mark

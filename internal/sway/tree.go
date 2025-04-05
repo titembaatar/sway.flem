@@ -1,12 +1,14 @@
 package sway
 
 import (
+	"fmt"
 	"slices"
 
+	errs "github.com/titembaatar/sway.flem/internal/errors"
 	"github.com/titembaatar/sway.flem/internal/log"
 )
 
-// Window in the Sway tree
+// WindowInfo represents a window in the Sway tree
 type WindowInfo struct {
 	ID          int      // Sway internal ID
 	Name        string   // Window title
@@ -20,7 +22,7 @@ type WindowInfo struct {
 	Marks       []string // Marks applied to this window
 }
 
-// Sway tree JSON structure
+// Node is the Sway tree JSON structure
 type Node struct {
 	ID               int               `json:"id"`
 	Name             string            `json:"name"`
@@ -36,22 +38,37 @@ type Node struct {
 	workspaceID      int
 }
 
+// WindowProperties represents X11 window properties
 type WindowProperties struct {
 	Class string `json:"class"`
 }
 
-func GetAllWindows() ([]WindowInfo, error) {
+// GetAllWindows retrieves all windows from the Sway tree
+func GetAllWindows(errorHandler *errs.ErrorHandler) ([]WindowInfo, error) {
 	log.Debug("Retrieving all windows from Sway tree")
 
 	var root Node
 	swayCmd := NewSwayCmdType("", "get_tree")
-	swayCmd.GetJSON(&root)
+	if errorHandler != nil {
+		swayCmd.WithErrorHandler(errorHandler)
+	}
+
+	if err := swayCmd.GetJSON(&root); err != nil {
+		treeErr := errs.Wrap(err, "Failed to get Sway tree information")
+
+		if errorHandler != nil {
+			errorHandler.Handle(treeErr)
+		}
+
+		return nil, treeErr
+	}
 
 	windows := collectWindows(root)
 	log.Debug("Found %d windows in Sway tree", len(windows))
 	return windows, nil
 }
 
+// collectWindows recursively collects windows from the Sway tree
 func collectWindows(node Node) []WindowInfo {
 	var windows []WindowInfo
 
@@ -96,10 +113,12 @@ func collectWindows(node Node) []WindowInfo {
 	return windows
 }
 
+// isWindow checks if a node is a window
 func isWindow(node Node) bool {
 	return node.AppID != "" || (node.WindowProperties != nil && node.WindowProperties.Class != "")
 }
 
+// FindWindowByMark finds a window by its mark
 func FindWindowByMark(mark string, windows []WindowInfo) *WindowInfo {
 	log.Debug("Searching for window with mark: %s", mark)
 
@@ -115,10 +134,28 @@ func FindWindowByMark(mark string, windows []WindowInfo) *WindowInfo {
 	return nil
 }
 
+// IsAppRunning checks if an app with the given mark is running
 func IsAppRunning(mark string) (bool, *WindowInfo, error) {
-	windows, err := GetAllWindows()
+	windows, err := GetAllWindows(nil)
 	if err != nil {
 		return false, nil, err
+	}
+
+	window := FindWindowByMark(mark, windows)
+	return window != nil, window, nil
+}
+
+// IsAppRunningWithErrorHandler checks if an app is running with error handler
+func IsAppRunningWithErrorHandler(mark string, errorHandler *errs.ErrorHandler) (bool, *WindowInfo, error) {
+	windows, err := GetAllWindows(errorHandler)
+	if err != nil {
+		markErr := errs.Wrap(err, fmt.Sprintf("Failed to check if app with mark '%s' is running", mark))
+
+		if errorHandler != nil {
+			errorHandler.Handle(markErr)
+		}
+
+		return false, nil, markErr
 	}
 
 	window := FindWindowByMark(mark, windows)
