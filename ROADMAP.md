@@ -5,8 +5,9 @@
 ## Short-Term Improvements
 
 ### Application Launch Intelligence
-- [ ] Implement Sway tree inspection to detect existing applications
-- [ ] Add logic to skip launching already running applications
+- [x] Implement Sway tree inspection to detect existing applications
+- [x] Add logic to skip launching already running applications
+- [x] Add configuration option to control post-command behavior (`rerun-post`)
 - [ ] Provide configuration options to force re-launch or skip
 
 ### Refresh and Recovery Features

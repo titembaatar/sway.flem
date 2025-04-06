@@ -54,6 +54,7 @@ workspaces:
   cmd: <custom-launch-command>  # Optional
   size: <size-specification>    # Optional
   delay: <launch-delay>         # Optional
+  rerun-post: true|false        # Optional (default: false)
   post:                         # Optional
     - <post-launch-command>
 ```
@@ -74,6 +75,17 @@ Sizes can be specified in two formats:
 - Percentage points: `50`, `50ppt`
 - Pixels: `800px`
 
+## Application Options
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `app` | string | Required | Name of the application |
+| `cmd` | string | Same as `app` | Custom launch command |
+| `size` | string | None | Size specification |
+| `delay` | integer | 0 | Delay in seconds before proceeding |
+| `rerun-post` | boolean | false | Whether to re-run post commands when focusing existing applications |
+| `post` | array | None | List of commands to run after launching |
+
 ## Full Example
 
 ```yaml
@@ -87,8 +99,15 @@ workspaces:
     containers:
       - app: "editor"
         size: 60
+        post:
+          - "echo 'Editor loaded'"
+        rerun-post: true  # Will run post commands even when focusing an existing instance
+
       - app: "terminal"
         size: 40
+        post:
+          - "echo 'Terminal loaded'"
+        # rerun-post defaults to false, so post commands won't run when focusing
 
   2:
     layout: v
@@ -109,3 +128,4 @@ workspaces:
 > - Workspace names can be numbers or strings
 > - Nested containers more complex layout configurations
 > - Size specifications are optional
+> - Post commands run only on initial launch by default; set `rerun-post: true` to run them every time

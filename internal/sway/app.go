@@ -13,13 +13,14 @@ import (
 )
 
 type App struct {
-	Name    string
-	Command string
-	Mark    Mark
-	Size    string
-	Delay   int64
-	Layout  string
-	Post    []string
+	Name      string
+	Command   string
+	Mark      Mark
+	Size      string
+	Delay     int64
+	Layout    string
+	Post      []string
+	RerunPost bool
 }
 
 func NewApp(container config.Container, markID string) *App {
@@ -29,13 +30,14 @@ func NewApp(container config.Container, markID string) *App {
 	}
 
 	return &App{
-		Name:    container.App,
-		Command: cmd,
-		Mark:    NewMark(markID),
-		Size:    container.Size,
-		Delay:   container.Delay,
-		Layout:  string(container.Split),
-		Post:    container.Post,
+		Name:      container.App,
+		Command:   cmd,
+		Mark:      NewMark(markID),
+		Size:      container.Size,
+		Delay:     container.Delay,
+		Layout:    string(container.Split),
+		Post:      container.Post,
+		RerunPost: container.RerunPost,
 	}
 }
 
@@ -76,15 +78,20 @@ func (a *App) Focus(errorHandler *errs.ErrorHandler) error {
 		return focusErr
 	}
 
-	if err := a.RunPost(errorHandler); err != nil {
-		postWarn := errs.NewWarning(err, fmt.Sprintf("Some post-focus commands failed for '%s'", a.Name))
-		postWarn.WithCategory("Application")
+	if a.RerunPost && len(a.Post) > 0 {
+		log.Debug("RerunPost is true, executing post-focus commands for '%s'", a.Name)
+		if err := a.RunPost(errorHandler); err != nil {
+			postWarn := errs.NewWarning(err, fmt.Sprintf("Some post-focus commands failed for '%s'", a.Name))
+			postWarn.WithCategory("Application")
 
-		if errorHandler != nil {
-			errorHandler.Handle(postWarn)
-		} else {
-			log.Warn("Some post-focus commands failed: %v", err)
+			if errorHandler != nil {
+				errorHandler.Handle(postWarn)
+			} else {
+				log.Warn("Some post-focus commands failed: %v", err)
+			}
 		}
+	} else if len(a.Post) > 0 {
+		log.Debug("Skipping post-focus commands for '%s' (RerunPost is false)", a.Name)
 	}
 
 	log.Info("Successfully focused existing application '%s'", a.Name)

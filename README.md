@@ -85,8 +85,14 @@ workspaces:
     containers:
       - app: firefox
         size: 50
+        post:
+          - "firefox --new-tab https://example.com"
+        rerun-post: false  # Only run post commands on initial launch (default behavior)
       - app: code
-        size: 50 # technically optional because of the way Sway works
+        size: 50  # technically optional because of the way Sway works
+        post:
+          - "code --goto README.md:10"
+        rerun-post: true  # Run post commands every time this app is focused
 ```
 
 ## 🤝 Contributing

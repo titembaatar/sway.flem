@@ -145,6 +145,26 @@ workspaces:
           - "echo 'Welcome to your workspace'"
 ```
 
+### Controlling Post-Command Behavior
+```yaml
+workspaces:
+  "dev":
+    layout: h
+    containers:
+      - app: "editor"
+        size: 60
+        post:
+          - "code --open-file /path/to/project/README.md"
+        rerun-post: true  # Will open the README file every time this editor is focused
+
+      - app: "browser"
+        cmd: "firefox"
+        size: 40
+        post:
+          - "firefox --new-tab http://localhost:3000"
+        # rerun-post is false by default, so this tab will only be opened on initial launch
+```
+
 > [!NOTE]
 >
 > - Experiment with different layouts and sizes
