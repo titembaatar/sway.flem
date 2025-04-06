@@ -22,6 +22,7 @@ type Flags struct {
 	Debug       bool
 	DryRun      bool
 	JSONLogs    bool
+	NoColor     bool
 }
 
 func main() {
@@ -49,12 +50,10 @@ func main() {
 	}
 }
 
-// Handles the 'sway' subcommand
 func runSwayCommand(args []string) {
 	flags := parseFlags(args)
 	configureLogging(flags)
 
-	// Create error handler
 	errorHandler := errs.NewErrorHandler(true, flags.Verbose, flags.Debug)
 
 	if flags.ShowVersion {
@@ -70,7 +69,6 @@ func runSwayCommand(args []string) {
 
 	log.Info("Starting flem sway v%s", version)
 
-	// Load configuration
 	cfg, err := config.LoadConfig(flags.ConfigFile)
 	if err != nil {
 		errorHandler.Handle(errs.Wrap(err, "Failed to load configuration"))
@@ -86,7 +84,6 @@ func runSwayCommand(args []string) {
 		os.Exit(0)
 	}
 
-	// Setup Sway environment
 	if err := app.Setup(cfg); err != nil {
 		errorHandler.Handle(errs.Wrap(err, "Failed to setup environment"))
 		os.Exit(1)
@@ -94,11 +91,9 @@ func runSwayCommand(args []string) {
 
 	log.Info("Sway environment has been successfully configured")
 
-	// Summarize any non-fatal errors or warnings
 	errorHandler.SummarizeErrors()
 }
 
-// Parses command line flags and returns the parsed values
 func parseFlags(args []string) *Flags {
 	flags := &Flags{}
 
@@ -110,13 +105,13 @@ func parseFlags(args []string) *Flags {
 	flagSet.BoolVar(&flags.Debug, "debug", false, "Enable debug mode with extra logging")
 	flagSet.BoolVar(&flags.DryRun, "dry-run", false, "Validate configuration without making changes")
 	flagSet.BoolVar(&flags.JSONLogs, "json-logs", false, "Output logs in JSON format (useful for log processing)")
+	flagSet.BoolVar(&flags.NoColor, "no-color", false, "Disable colored output in logs")
 
 	flagSet.Parse(args)
 
 	return flags
 }
 
-// Sets up the logging level based on flags
 func configureLogging(flags *Flags) {
 	if flags.Debug {
 		log.SetLevel(log.LogLevelDebug)
@@ -126,7 +121,10 @@ func configureLogging(flags *Flags) {
 		log.SetLevel(log.LogLevelWarn)
 	}
 
-	// Check if JSON logging should be enabled via flag
+	if flags.NoColor {
+		log.SetColorOutput(false)
+	}
+
 	if flags.JSONLogs {
 		log.EnableJSONLogging()
 	}
@@ -146,6 +144,7 @@ func printUsage() {
 	fmt.Println("  -debug                Enable debug mode with extra logging")
 	fmt.Println("  -dry-run              Validate configuration without making changes")
 	fmt.Println("  -json-logs            Output logs in JSON format (useful for log processing)")
+	fmt.Println("  -no-color             Disable colored output in logs")
 	fmt.Println("\nExamples:")
 	fmt.Println("  flem sway -config ~/.config/sway/config.yml")
 	fmt.Println("  flem sway -config ~/.config/sway/config.yml -verbose")

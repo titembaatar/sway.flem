@@ -8,7 +8,6 @@ import (
 	"github.com/titembaatar/sway.flem/internal/log"
 )
 
-// WindowInfo represents a window in the Sway tree
 type WindowInfo struct {
 	ID          int      // Sway internal ID
 	Name        string   // Window title
@@ -22,7 +21,6 @@ type WindowInfo struct {
 	Marks       []string // Marks applied to this window
 }
 
-// Node is the Sway tree JSON structure
 type Node struct {
 	ID               int               `json:"id"`
 	Name             string            `json:"name"`
@@ -38,12 +36,10 @@ type Node struct {
 	workspaceID      int
 }
 
-// WindowProperties represents X11 window properties
 type WindowProperties struct {
 	Class string `json:"class"`
 }
 
-// GetAllWindows retrieves all windows from the Sway tree
 func GetAllWindows(errorHandler *errs.ErrorHandler) ([]WindowInfo, error) {
 	log.Debug("Retrieving all windows from Sway tree")
 
@@ -68,7 +64,6 @@ func GetAllWindows(errorHandler *errs.ErrorHandler) ([]WindowInfo, error) {
 	return windows, nil
 }
 
-// collectWindows recursively collects windows from the Sway tree
 func collectWindows(node Node) []WindowInfo {
 	var windows []WindowInfo
 
@@ -77,25 +72,23 @@ func collectWindows(node Node) []WindowInfo {
 		node.workspaceID = node.ID
 	}
 
-	if node.Type == "con" {
-		if isWindow(node) {
-			window := WindowInfo{
-				ID:          node.ID,
-				Name:        node.Name,
-				AppID:       node.AppID,
-				PID:         node.PID,
-				Focused:     node.Focused,
-				Workspace:   node.workspace,
-				WorkspaceID: node.workspaceID,
-				Marks:       node.Marks,
-			}
-
-			if node.WindowProperties != nil {
-				window.Class = node.WindowProperties.Class
-			}
-
-			windows = append(windows, window)
+	if node.Type == "con" && isWindow(node) {
+		window := WindowInfo{
+			ID:          node.ID,
+			Name:        node.Name,
+			AppID:       node.AppID,
+			PID:         node.PID,
+			Focused:     node.Focused,
+			Workspace:   node.workspace,
+			WorkspaceID: node.workspaceID,
+			Marks:       node.Marks,
 		}
+
+		if node.WindowProperties != nil {
+			window.Class = node.WindowProperties.Class
+		}
+
+		windows = append(windows, window)
 	}
 
 	for _, child := range node.Nodes {
@@ -113,12 +106,10 @@ func collectWindows(node Node) []WindowInfo {
 	return windows
 }
 
-// isWindow checks if a node is a window
 func isWindow(node Node) bool {
 	return node.AppID != "" || (node.WindowProperties != nil && node.WindowProperties.Class != "")
 }
 
-// FindWindowByMark finds a window by its mark
 func FindWindowByMark(mark string, windows []WindowInfo) *WindowInfo {
 	log.Debug("Searching for window with mark: %s", mark)
 
@@ -134,7 +125,6 @@ func FindWindowByMark(mark string, windows []WindowInfo) *WindowInfo {
 	return nil
 }
 
-// IsAppRunning checks if an app with the given mark is running
 func IsAppRunning(mark string) (bool, *WindowInfo, error) {
 	windows, err := GetAllWindows(nil)
 	if err != nil {
@@ -145,7 +135,6 @@ func IsAppRunning(mark string) (bool, *WindowInfo, error) {
 	return window != nil, window, nil
 }
 
-// IsAppRunningWithErrorHandler checks if an app is running with error handler
 func IsAppRunningWithErrorHandler(mark string, errorHandler *errs.ErrorHandler) (bool, *WindowInfo, error) {
 	windows, err := GetAllWindows(errorHandler)
 	if err != nil {

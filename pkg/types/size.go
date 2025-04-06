@@ -8,30 +8,24 @@ import (
 	"strconv"
 )
 
-// Size errors
 var (
 	ErrInvalidSizeFormat = errors.New("invalid size format: must be a number, optionally followed by 'ppt' or 'px'")
 )
 
-// Unit for container sizes
 type SizeUnit string
 
-// Size units
 const (
-	UnitPercent SizeUnit = "ppt" // Percentage points (default in Sway)
-	UnitPixels  SizeUnit = "px"  // Pixels
+	UnitPercent SizeUnit = "ppt"
+	UnitPixels  SizeUnit = "px"
 )
 
-// Container size
 type Size struct {
-	Value int      // Numeric value
-	Unit  SizeUnit // Unit (ppt or px)
+	Value int
+	Unit  SizeUnit
 }
 
-// Regular expression for parsing sizes
 var sizeRegex = regexp.MustCompile(`^(\d+)(ppt|px)?$`)
 
-// String into a Size
 func ParseSize(s string) (Size, error) {
 	if s == "" {
 		return Size{}, nil
@@ -55,7 +49,7 @@ func ParseSize(s string) (Size, error) {
 		return Size{}, ErrInvalidSizeFormat
 	}
 
-	unit := UnitPercent // Default to percentage points (ppt)
+	unit := UnitPercent
 	if len(matches) > 2 && matches[2] != "" {
 		unit = SizeUnit(matches[2])
 	}
@@ -63,7 +57,6 @@ func ParseSize(s string) (Size, error) {
 	return Size{Value: value, Unit: unit}, nil
 }
 
-// String representation of the size
 func (s Size) String() string {
 	if s.Value == 0 {
 		return ""
@@ -74,12 +67,10 @@ func (s Size) String() string {
 	return fmt.Sprintf("%d%s", s.Value, s.Unit)
 }
 
-// json.Marshaler interface
 func (s Size) MarshalJSON() ([]byte, error) {
 	return json.Marshal(s.String())
 }
 
-// json.Unmarshaler interface
 func (s *Size) UnmarshalJSON(data []byte) error {
 	var str string
 	if err := json.Unmarshal(data, &str); err != nil {

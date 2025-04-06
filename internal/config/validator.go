@@ -25,16 +25,13 @@ func ValidateConfig(config *Config) error {
 			return configErr
 		}
 
-		// Update the workspace layout in the original config
 		workspace.Layout = layout
 		config.Workspaces[name] = workspace
 
-		// Normalize container layouts where possible
 		if err := normalizeContainerLayouts(&workspace); err != nil {
 			return errs.Wrap(err, fmt.Sprintf("Error normalizing layouts in workspace '%s'", name))
 		}
 
-		// Update the workspace in the config with normalized containers
 		config.Workspaces[name] = workspace
 
 		if err := validateWorkspace(name, workspace); err != nil {
@@ -48,7 +45,6 @@ func ValidateConfig(config *Config) error {
 	return nil
 }
 
-// normalizeContainerLayouts normalizes layout types in all containers
 func normalizeContainerLayouts(workspace *Workspace) error {
 	for i := range workspace.Containers {
 		if err := normalizeContainer(&workspace.Containers[i]); err != nil {
@@ -58,9 +54,7 @@ func normalizeContainerLayouts(workspace *Workspace) error {
 	return nil
 }
 
-// normalizeContainer normalizes the layout type in a container and its nested containers
 func normalizeContainer(container *Container) error {
-	// If this is a nested container, normalize its split layout
 	if len(container.Containers) > 0 && container.Split != "" {
 		splitStr := string(container.Split)
 		layout, err := types.ParseLayoutType(splitStr)
@@ -68,10 +62,8 @@ func normalizeContainer(container *Container) error {
 			return err
 		}
 
-		// Update the split layout in the original container
 		container.Split = layout
 
-		// Recursively normalize nested containers
 		for i := range container.Containers {
 			if err := normalizeContainer(&container.Containers[i]); err != nil {
 				return err
@@ -163,10 +155,6 @@ func validateNestedContainer(workspaceName string, container Container, context 
 		return errs.NewConfigError(errs.ErrInvalidLayoutType, workspaceName, fmt.Sprintf("%s.split", context), -1).
 			WithSuggestion(errs.GetLayoutSuggestion())
 	}
-
-	// We're not modifying the container here, just validating it
-	// The actual normalization should happen when processing the container
-	// during workspace setup
 
 	for i, nestedContainer := range container.Containers {
 		nestedContext := fmt.Sprintf("%s.containers[%d]", context, i)

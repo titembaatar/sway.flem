@@ -9,8 +9,6 @@ import (
 	"github.com/titembaatar/sway.flem/internal/log"
 )
 
-// CheckCommand verifies if a command is available in the system PATH
-// Returns nil if the command is available, otherwise returns an error
 func CheckCommand(command string) error {
 	log.Debug("Checking if %s is available", command)
 
@@ -33,15 +31,12 @@ func CheckCommand(command string) error {
 	return nil
 }
 
-// ExecuteCommand executes a command string
-// It parses the command string into command and arguments
 func ExecuteCommand(cmdStr string) error {
 	parts := strings.Fields(cmdStr)
 	if len(parts) == 0 {
 		return fmt.Errorf("empty command")
 	}
 
-	// Validate the command exists
 	if err := ValidateCommand(parts[0]); err != nil {
 		return err
 	}

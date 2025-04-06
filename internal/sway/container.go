@@ -45,7 +45,7 @@ func (c *Container) SetLayout(errorHandler *errs.ErrorHandler) error {
 	layout, err := types.ParseLayoutType(c.Layout)
 	if err != nil {
 		layoutErr := errs.New(errs.ErrInvalidLayoutType,
-			fmt.Sprintf("'%s' is not a valid layout type for container mark %s", c.Layout, c.Mark.String()))
+			fmt.Sprintf("'%s' is not a valid layout type for container %s", c.Layout, c.Mark.String()))
 		layoutErr.WithCategory("Sway")
 		layoutErr.WithSuggestion(errs.GetLayoutSuggestion())
 
@@ -56,7 +56,7 @@ func (c *Container) SetLayout(errorHandler *errs.ErrorHandler) error {
 		return layoutErr
 	}
 
-	log.Debug("Setting layout '%s' for container mark '%s'", layout, c.Mark.String())
+	log.Debug("Setting layout '%s' for container %s", layout, c.Mark.String())
 
 	commands := []string{layout.SplitCommand()}
 	switch layout {
@@ -75,7 +75,7 @@ func (c *Container) SetLayout(errorHandler *errs.ErrorHandler) error {
 		_, err := cmd.Run()
 		if err != nil {
 			cmdErr := errs.New(errs.ErrSetLayoutFailed,
-				fmt.Sprintf("Failed to set layout '%s' for container mark '%s'", layout, c.Mark.String()))
+				fmt.Sprintf("Failed to set layout '%s' for container %s", layout, c.Mark.String()))
 			cmdErr.WithCategory("Sway")
 
 			if errorHandler != nil {
@@ -86,7 +86,6 @@ func (c *Container) SetLayout(errorHandler *errs.ErrorHandler) error {
 		}
 	}
 
-	log.Debug("Successfully set layout '%s' for container mark '%s'", layout, c.Mark.String())
 	return nil
 }
 
@@ -151,14 +150,15 @@ func buildContainerTree(
 					errorHandler.Handle(layoutWarn)
 				}
 
-				log.Warn(warnMsg)
+				log.Warn("Nested container definition for container ID %d is missing 'split' layout, inheriting parent layout '%s'",
+					currentContainerID, parentLayout)
 			}
 
 			nestedID := *nextContainerID
 			*nextContainerID++
 
-			log.Debug("Recursing for nested container. CurrentID: %d, Assigned NestedID: %d, Next Available ID: %d",
-				currentContainerID, nestedID, *nextContainerID)
+			log.Debug("Recursing for nested container. CurrentID: %d, Assigned NestedID: %d",
+				currentContainerID, nestedID)
 
 			nestedContainer, err := buildContainerTree(
 				workspaceName,
@@ -227,12 +227,11 @@ func (c *Container) Setup(errorHandler *errs.ErrorHandler) error {
 			errorHandler.Handle(emptyWarn)
 		}
 
-		log.Warn("Container %s has no apps and no nested containers to set up.", c.Mark.String())
+		log.Warn("Container %s has no apps and no nested containers to set up", c.Mark.String())
 		return nil
 	}
 
 	if len(c.Apps) > 0 || len(c.Nested) > 0 {
-		log.Debug("Applying mark %s to container", c.Mark.String())
 		if err := c.Mark.Apply(errorHandler); err != nil {
 			markErr := errs.Wrap(err, fmt.Sprintf("Failed to apply mark %s", c.Mark.String()))
 
@@ -243,7 +242,6 @@ func (c *Container) Setup(errorHandler *errs.ErrorHandler) error {
 			return markErr
 		}
 
-		log.Debug("Setting layout %s for container %s", c.Layout, c.Mark.String())
 		if err := c.SetLayout(errorHandler); err != nil {
 			layoutErr := errs.Wrap(err, fmt.Sprintf("Failed to set layout for container %s", c.Mark.String()))
 
@@ -265,10 +263,8 @@ func (c *Container) Setup(errorHandler *errs.ErrorHandler) error {
 
 				if errorHandler != nil {
 					errorHandler.Handle(appErr)
-					// Continue with other apps despite this error
 				} else {
-					log.Error("Failed to process subsequent app '%s' in container %s: %v",
-						app.Name, c.Mark.String(), err)
+					log.Error("Failed to process subsequent app '%s': %v", app.Name, err)
 				}
 			}
 		}
@@ -282,10 +278,8 @@ func (c *Container) Setup(errorHandler *errs.ErrorHandler) error {
 
 			if errorHandler != nil {
 				errorHandler.Handle(nestedErr)
-				// Continue with other nested containers despite this error
 			} else {
-				log.Error("Failed to set up nested container %s within %s: %v",
-					nested.Mark.String(), c.Mark.String(), err)
+				log.Error("Failed to set up nested container %s: %v", nested.Mark.String(), err)
 			}
 		}
 	}
@@ -296,17 +290,16 @@ func (c *Container) Setup(errorHandler *errs.ErrorHandler) error {
 
 func (c *Container) ResizeApps(errorHandler *errs.ErrorHandler) {
 	log.Debug("Resizing apps in container %s", c.Mark.String())
+
 	for _, app := range c.Apps {
 		if app.Size != "" {
 			if err := app.Resize(errorHandler); err != nil {
-				resizeErr := errs.Wrap(err, fmt.Sprintf("Failed to resize app %s (mark %s) in container %s",
-					app.Name, app.Mark.String(), c.Mark.String()))
-
 				if errorHandler != nil {
+					resizeErr := errs.Wrap(err, fmt.Sprintf("Failed to resize app %s in container %s",
+						app.Name, c.Mark.String()))
 					errorHandler.Handle(resizeErr)
 				} else {
-					log.Warn("Failed to resize app %s (mark %s) in container %s: %v",
-						app.Name, app.Mark.String(), c.Mark.String(), err)
+					log.Warn("Failed to resize app %s: %v", app.Name, err)
 				}
 			}
 		}

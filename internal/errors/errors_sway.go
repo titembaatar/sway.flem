@@ -6,7 +6,6 @@ import (
 	"strings"
 )
 
-// Sway-specific errors
 var (
 	ErrCommandFailed         = errors.New("sway command failed")
 	ErrAppLaunchFailed       = errors.New("failed to launch application")
@@ -18,14 +17,12 @@ var (
 	ErrSwayNotAvailable      = errors.New("sway command not available")
 )
 
-// SwayCommandError represents an error from executing a sway command
 type SwayCommandError struct {
 	*AppError
 	Command string
 	Output  string
 }
 
-// NewSwayCommandError creates a new sway command error
 func NewSwayCommandError(command string, err error, output string) *SwayCommandError {
 	message := fmt.Sprintf("Sway command '%s' failed", command)
 
@@ -42,20 +39,17 @@ func NewSwayCommandError(command string, err error, output string) *SwayCommandE
 	}
 }
 
-// WithOutput adds command output to the error
 func (e *SwayCommandError) WithOutput(output string) *SwayCommandError {
 	e.Output = output
 	return e
 }
 
-// AppLaunchError represents an error launching an application
 type AppLaunchError struct {
 	*AppError
 	AppName string
 	Command string
 }
 
-// NewAppLaunchError creates a new application launch error
 func NewAppLaunchError(appName, command string, err error) *AppLaunchError {
 	message := fmt.Sprintf("Failed to launch application '%s'", appName)
 
@@ -69,13 +63,11 @@ func NewAppLaunchError(appName, command string, err error) *AppLaunchError {
 	}
 }
 
-// MarkError represents an error applying a mark to a container
 type MarkError struct {
 	*AppError
 	Mark string
 }
 
-// NewMarkError creates a new mark error
 func NewMarkError(mark string, err error) *MarkError {
 	message := fmt.Sprintf("Failed to apply mark '%s'", mark)
 
@@ -87,7 +79,6 @@ func NewMarkError(mark string, err error) *MarkError {
 	}
 }
 
-// ResizeError represents an error resizing a container
 type ResizeError struct {
 	*AppError
 	Mark      string
@@ -96,7 +87,6 @@ type ResizeError struct {
 	Layout    string
 }
 
-// NewResizeError creates a new resize error
 func NewResizeError(mark, size, dimension, layout string, err error) *ResizeError {
 	message := fmt.Sprintf("Failed to resize container '%s' to %s %s", mark, size, dimension)
 

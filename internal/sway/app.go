@@ -44,7 +44,6 @@ func (a *App) Process(errorHandler *errs.ErrorHandler) error {
 
 	running, _, err := IsAppRunning(a.Mark.String())
 	if err != nil {
-		// Just log a warning and continue - checking is nice to have but not critical
 		appWarn := errs.NewWarning(err, fmt.Sprintf("Failed to check if application '%s' is already running", a.Name))
 		appWarn.WithCategory("Application")
 
@@ -71,25 +70,24 @@ func (a *App) Focus(errorHandler *errs.ErrorHandler) error {
 		if errorHandler != nil {
 			errorHandler.Handle(focusErr)
 		} else {
-			log.Error("Failed to focus existing window with mark '%s': %v", a.Mark.String(), err)
+			log.Error("Failed to focus existing window: %v", err)
 		}
 
 		return focusErr
 	}
 
 	if err := a.RunPost(errorHandler); err != nil {
-		// Non-fatal error - just log a warning
 		postWarn := errs.NewWarning(err, fmt.Sprintf("Some post-focus commands failed for '%s'", a.Name))
 		postWarn.WithCategory("Application")
 
 		if errorHandler != nil {
 			errorHandler.Handle(postWarn)
 		} else {
-			log.Warn("Some post-focus commands failed for '%s': %v", a.Name, err)
+			log.Warn("Some post-focus commands failed: %v", err)
 		}
 	}
 
-	log.Info("Successfully focused existing application '%s' with mark '%s'", a.Name, a.Mark.String())
+	log.Info("Successfully focused existing application '%s'", a.Name)
 	return nil
 }
 
@@ -101,18 +99,17 @@ func (a *App) Launch(errorHandler *errs.ErrorHandler) error {
 	}
 
 	if err := a.RunPost(errorHandler); err != nil {
-		// Non-fatal error - just log a warning
 		postWarn := errs.NewWarning(err, fmt.Sprintf("Some post-launch commands failed for '%s'", a.Name))
 		postWarn.WithCategory("Application")
 
 		if errorHandler != nil {
 			errorHandler.Handle(postWarn)
 		} else {
-			log.Warn("Some post-launch commands failed for '%s': %v", a.Name, err)
+			log.Warn("Some post-launch commands failed: %v", err)
 		}
 	}
 
-	log.Info("Successfully launched application '%s' with mark '%s'", a.Name, a.Mark.String())
+	log.Info("Successfully launched application '%s'", a.Name)
 	return nil
 }
 
@@ -123,7 +120,7 @@ func (a *App) start(errorHandler *errs.ErrorHandler) error {
 		if errorHandler != nil {
 			errorHandler.Handle(launchErr)
 		} else {
-			log.Error("Failed to start application '%s' with command '%s': %v", a.Name, a.Command, err)
+			log.Error("Failed to start application '%s': %v", a.Name, err)
 		}
 
 		return launchErr
@@ -137,14 +134,14 @@ func (a *App) start(errorHandler *errs.ErrorHandler) error {
 		time.Sleep(300 * time.Millisecond)
 	}
 
-	log.Debug("Applying mark '%s' to application", a.Mark.String())
+	log.Debug("Applying mark to application")
 	if err := a.Mark.Apply(errorHandler); err != nil {
-		markErr := errs.Wrap(err, fmt.Sprintf("Failed to apply mark '%s' to application '%s'", a.Mark.String(), a.Name))
+		markErr := errs.Wrap(err, fmt.Sprintf("Failed to apply mark to application '%s'", a.Name))
 
 		if errorHandler != nil {
 			errorHandler.Handle(markErr)
 		} else {
-			log.Error("Failed to apply mark '%s' to application '%s': %v", a.Mark.String(), a.Name, err)
+			log.Error("Failed to apply mark: %v", err)
 		}
 
 		return markErr
@@ -154,17 +151,17 @@ func (a *App) start(errorHandler *errs.ErrorHandler) error {
 }
 
 func (a *App) RunPost(errorHandler *errs.ErrorHandler) error {
-	if len(a.Post) == 0 {
+	postCmdCount := len(a.Post)
+	if postCmdCount == 0 {
 		return nil
 	}
 
-	log.Debug("Executing %d post commands for '%s'", len(a.Post), a.Name)
+	log.Debug("Executing %d post commands for '%s'", postCmdCount, a.Name)
 	return RunCommands(a.Post, errorHandler)
 }
 
 func (a *App) Resize(errorHandler *errs.ErrorHandler) error {
 	if a.Size == "" {
-		log.Debug("Skipping resize for mark '%s' (no size specified)", a.Mark.String())
 		return nil
 	}
 
@@ -196,17 +193,13 @@ func (a *App) Resize(errorHandler *errs.ErrorHandler) error {
 		if errorHandler != nil {
 			errorHandler.Handle(resizeErr)
 		} else {
-			log.Error("Failed to resize container with mark '%s' to %s %s: %v",
-				a.Mark.String(), a.Size, orientation, err)
+			log.Error("Failed to resize container: %v", err)
 		}
 
 		return resizeErr
 	}
 
 	time.Sleep(100 * time.Millisecond)
-
-	log.Debug("Successfully resized container with mark '%s' to %s %s", a.Mark.String(), a.Size, orientation)
-
 	return nil
 }
 

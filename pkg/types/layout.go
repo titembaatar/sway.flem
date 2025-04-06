@@ -7,15 +7,12 @@ import (
 	"strings"
 )
 
-// Layout errors
 var (
 	ErrInvalidLayoutType = errors.New("invalid layout type")
 )
 
-// Container layout in Sway
 type LayoutType string
 
-// Layout type constants
 const (
 	LayoutHorizontal LayoutType = "splith"
 	LayoutVertical   LayoutType = "splitv"
@@ -23,14 +20,12 @@ const (
 	LayoutStacking   LayoutType = "stacking"
 )
 
-// Aliases of layouts
 var layoutAliases = map[string]LayoutType{
 	"splith":   LayoutHorizontal,
 	"splitv":   LayoutVertical,
 	"tabbed":   LayoutTabbed,
 	"stacking": LayoutStacking,
 
-	// Aliases
 	"horizontal": LayoutHorizontal,
 	"h":          LayoutHorizontal,
 	"vertical":   LayoutVertical,
@@ -41,17 +36,14 @@ var layoutAliases = map[string]LayoutType{
 	"t":          LayoutTabbed,
 }
 
-// String representation of the layout type
 func (l LayoutType) String() string {
 	return string(l)
 }
 
-// Sway command for this layout
 func (l LayoutType) Command() string {
 	return fmt.Sprintf("layout %s", l)
 }
 
-// Sway command for splitting in this layout
 func (l LayoutType) SplitCommand() string {
 	switch l {
 	case LayoutHorizontal:
@@ -67,7 +59,6 @@ func (l LayoutType) SplitCommand() string {
 	}
 }
 
-// Dimension to use for resizing with this layout
 func (l LayoutType) Orientation() string {
 	switch l {
 	case LayoutHorizontal, LayoutTabbed:
@@ -79,7 +70,6 @@ func (l LayoutType) Orientation() string {
 	}
 }
 
-// Parses a string into a LayoutType
 func ParseLayoutType(s string) (LayoutType, error) {
 	if s == "" {
 		return "", ErrInvalidLayoutType
@@ -92,12 +82,10 @@ func ParseLayoutType(s string) (LayoutType, error) {
 	return "", ErrInvalidLayoutType
 }
 
-// json.Marshaler interface
 func (l LayoutType) MarshalJSON() ([]byte, error) {
 	return json.Marshal(string(l))
 }
 
-// json.Unmarshaler interface
 func (l *LayoutType) UnmarshalJSON(data []byte) error {
 	var s string
 	if err := json.Unmarshal(data, &s); err != nil {

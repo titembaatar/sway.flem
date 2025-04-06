@@ -5,7 +5,6 @@ import (
 	"fmt"
 )
 
-// Configuration-specific errors
 var (
 	ErrNoWorkspaces              = errors.New("no workspaces defined in configuration")
 	ErrInvalidLayoutType         = errors.New("invalid layout type")
@@ -16,7 +15,6 @@ var (
 	ErrInvalidSizeFormat         = errors.New("invalid size format: must be a number, optionally followed by 'ppt' or 'px' (e.g., '50', '50ppt', '800px')")
 )
 
-// ConfigError represents an error in the configuration
 type ConfigError struct {
 	*AppError
 	Workspace   string
@@ -24,7 +22,6 @@ type ConfigError struct {
 	ContainerID int
 }
 
-// NewConfigError creates a new configuration error
 func NewConfigError(err error, workspace, context string, containerID int) *ConfigError {
 	message := buildConfigErrorMessage(workspace, context, containerID)
 
@@ -38,7 +35,6 @@ func NewConfigError(err error, workspace, context string, containerID int) *Conf
 	}
 }
 
-// NewFatalConfigError creates a fatal configuration error
 func NewFatalConfigError(err error, workspace, context string, containerID int) *ConfigError {
 	message := buildConfigErrorMessage(workspace, context, containerID)
 
@@ -52,19 +48,16 @@ func NewFatalConfigError(err error, workspace, context string, containerID int) 
 	}
 }
 
-// WithConfigFile adds configuration file information
 func (e *ConfigError) WithConfigFile(file string, line int) *ConfigError {
 	e.AppError.WithFile(file, line, 0)
 	return e
 }
 
-// WithSuggestion adds a recovery suggestion
 func (e *ConfigError) WithSuggestion(suggestion string) *ConfigError {
 	e.AppError.WithSuggestion(suggestion)
 	return e
 }
 
-// Helper function to build a descriptive error message
 func buildConfigErrorMessage(workspace, context string, containerID int) string {
 	var locationInfo string
 
@@ -87,7 +80,6 @@ func buildConfigErrorMessage(workspace, context string, containerID int) string 
 	return "Configuration error"
 }
 
-// Common suggestions for configuration errors
 func GetLayoutSuggestion() string {
 	return "Valid layouts are: 'splith'/'h'/'horizontal', 'splitv'/'v'/'vertical', 'tabbed'/'t', 'stacking'/'s'"
 }

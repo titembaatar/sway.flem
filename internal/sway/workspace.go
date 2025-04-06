@@ -24,7 +24,6 @@ func NewWorkspace(name string, layout string) *Workspace {
 	}
 }
 
-// WithErrorHandler adds an error handler to the workspace
 func (w *Workspace) WithErrorHandler(handler *errs.ErrorHandler) *Workspace {
 	w.ErrorHandler = handler
 	return w

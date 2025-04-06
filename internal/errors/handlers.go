@@ -9,20 +9,15 @@ import (
 	"github.com/titembaatar/sway.flem/internal/log"
 )
 
-// ErrorHandler manages error reporting and recovery
 type ErrorHandler struct {
-	// Settings
 	ExitOnFatal    bool
 	VerboseLogging bool
 	DebugMode      bool
-
-	// Statistics
-	ErrorCount   int
-	WarningCount int
-	FatalErrors  []error
+	ErrorCount     int
+	WarningCount   int
+	FatalErrors    []error
 }
 
-// NewErrorHandler creates a new error handler
 func NewErrorHandler(exitOnFatal, verbose, debug bool) *ErrorHandler {
 	return &ErrorHandler{
 		ExitOnFatal:    exitOnFatal,
@@ -31,7 +26,6 @@ func NewErrorHandler(exitOnFatal, verbose, debug bool) *ErrorHandler {
 	}
 }
 
-// Handle processes an error and decides how to respond
 func (h *ErrorHandler) Handle(err error) bool {
 	if err == nil {
 		return false
@@ -42,13 +36,11 @@ func (h *ErrorHandler) Handle(err error) bool {
 		return h.handleAppError(appErr)
 	}
 
-	// Treat untyped errors as regular errors (non-fatal)
 	h.ErrorCount++
 	log.Error("Error: %v", err)
 	return false
 }
 
-// HandleWithMessage processes an error with additional context
 func (h *ErrorHandler) HandleWithMessage(err error, message string) bool {
 	if err == nil {
 		return false
@@ -58,7 +50,6 @@ func (h *ErrorHandler) HandleWithMessage(err error, message string) bool {
 	return h.Handle(wrappedErr)
 }
 
-// handleAppError processes a typed AppError
 func (h *ErrorHandler) handleAppError(err *AppError) bool {
 	switch err.Severity {
 	case SeverityFatal:
@@ -77,14 +68,12 @@ func (h *ErrorHandler) handleAppError(err *AppError) bool {
 		return false
 
 	default:
-		// Unknown severity, treat as error
 		h.ErrorCount++
 		log.Error("Error: %v", err)
 		return false
 	}
 }
 
-// handleFatal processes a fatal error
 func (h *ErrorHandler) handleFatal(err *AppError) bool {
 	if h.ExitOnFatal {
 		fmt.Fprintf(os.Stderr, "Fatal error: %v\n", err)
@@ -97,7 +86,6 @@ func (h *ErrorHandler) handleFatal(err *AppError) bool {
 	return true
 }
 
-// logFatalError logs a fatal error
 func (h *ErrorHandler) logFatalError(err *AppError) {
 	log.Fatal("%v", err)
 	if err.Suggestion != "" && h.VerboseLogging {
@@ -105,7 +93,6 @@ func (h *ErrorHandler) logFatalError(err *AppError) {
 	}
 }
 
-// logError logs a regular error
 func (h *ErrorHandler) logError(err *AppError) {
 	log.Error("%v", err)
 	if err.Suggestion != "" && h.VerboseLogging {
@@ -113,7 +100,6 @@ func (h *ErrorHandler) logError(err *AppError) {
 	}
 }
 
-// logWarning logs a warning
 func (h *ErrorHandler) logWarning(err *AppError) {
 	log.Warn("%v", err)
 	if err.Suggestion != "" && h.VerboseLogging {
@@ -121,7 +107,6 @@ func (h *ErrorHandler) logWarning(err *AppError) {
 	}
 }
 
-// SummarizeErrors prints a summary of encountered errors
 func (h *ErrorHandler) SummarizeErrors() {
 	if h.ErrorCount == 0 && h.WarningCount == 0 {
 		return
@@ -143,24 +128,20 @@ func (h *ErrorHandler) SummarizeErrors() {
 	}
 }
 
-// HasErrors returns true if errors were encountered
 func (h *ErrorHandler) HasErrors() bool {
 	return h.ErrorCount > 0
 }
 
-// HasWarnings returns true if warnings were encountered
 func (h *ErrorHandler) HasWarnings() bool {
 	return h.WarningCount > 0
 }
 
-// ResetCounts resets the error and warning counters
 func (h *ErrorHandler) ResetCounts() {
 	h.ErrorCount = 0
 	h.WarningCount = 0
 	h.FatalErrors = nil
 }
 
-// FormatErrorsForUser formats errors in a user-friendly way
 func FormatErrorsForUser(errs []error) string {
 	if len(errs) == 0 {
 		return ""

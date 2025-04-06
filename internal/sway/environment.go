@@ -18,7 +18,6 @@ type Environment struct {
 
 func NewEnvironment(cfg *config.Config, errorHandler *errs.ErrorHandler) *Environment {
 	if errorHandler == nil {
-		// Create a default error handler if none provided
 		errorHandler = errs.NewErrorHandler(false, true, false)
 	}
 
@@ -46,7 +45,6 @@ func (e *Environment) Setup() error {
 	}
 
 	if err := e.focusRequestedWorkspaces(); err != nil {
-		// Non-fatal error, just log a warning
 		log.Warn("Some workspace focusing operations failed: %v", err)
 	}
 
@@ -64,7 +62,6 @@ func (e *Environment) validateEnvironment() error {
 	}
 
 	log.Debug("All dependencies are available")
-
 	envOp.End()
 	return nil
 }
@@ -90,7 +87,6 @@ func (e *Environment) setupWorkspaces() error {
 			setupErr := errs.Wrap(err, fmt.Sprintf("Failed to set up workspace '%s'", name))
 			e.ErrorHandler.Handle(setupErr)
 
-			// Continue with other workspaces even if this one failed
 			continue
 		}
 	}
@@ -112,10 +108,6 @@ func (e *Environment) focusRequestedWorkspaces() error {
 		return nil
 	}
 
-	focusOp := log.Operation("workspace focusing")
-	focusOp.Begin()
-
-	log.Info("Focusing on %d specified workspaces: %v", len(e.Config.Focus), e.Config.Focus)
 	return FocusWorkspaces(e.Config.Focus)
 }
 
@@ -123,5 +115,3 @@ func SetupEnvironment(cfg *config.Config, errorHandler *errs.ErrorHandler) error
 	env := NewEnvironment(cfg, errorHandler)
 	return env.Setup()
 }
-
-// No longer needed - using utility function instead

@@ -63,12 +63,13 @@ func (m Mark) Focus(errorHandler *errs.ErrorHandler) error {
 	return nil
 }
 
-func (m Mark) Resize(width string, height string) string {
-	return fmt.Sprintf("resize set %s %s", width, height)
+func (m Mark) Resize(dimension string, size string) string {
+	return fmt.Sprintf("resize set %s %s", dimension, size)
 }
 
 func (m Mark) Apply(errorHandler *errs.ErrorHandler) error {
 	log.Debug("Applying mark '%s' to focused container", m.ID)
+
 	cmd := fmt.Sprintf("mark --add %s", m.ID)
 	swayCmd := NewSwayCmd(cmd)
 	if errorHandler != nil {

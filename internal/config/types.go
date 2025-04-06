@@ -4,19 +4,16 @@ import (
 	"github.com/titembaatar/sway.flem/pkg/types"
 )
 
-// Configuration file
 type Config struct {
 	Workspaces map[string]Workspace `yaml:"workspaces" json:"workspaces"`
 	Focus      []string             `yaml:"focus" json:"focus"`
 }
 
-// Workspace configuration
 type Workspace struct {
 	Layout     types.LayoutType `yaml:"layout" json:"layout"`
 	Containers []Container      `yaml:"containers" json:"containers"`
 }
 
-// Container in a workspace
 type Container struct {
 	App        string           `yaml:"app" json:"app"`
 	Cmd        string           `yaml:"cmd" json:"cmd"`
